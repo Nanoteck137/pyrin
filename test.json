@@ -1,0 +1,51 @@
+{
+    "structs": [
+        {
+            "name": "GetAlbums",
+            "fields": [
+                {
+                    "type": "array Album",
+                    "name": "albums"
+                }
+            ]
+        },
+        {
+            "name": "Album",
+            "fields": [
+                {
+                    "type": "string",
+                    "name": "id"
+                },
+                {
+                    "type": "string",
+                    "name": "name"
+                },
+                {
+                    "type": "string",
+                    "name": "coverArt"
+                },
+                {
+                    "type": "Test",
+                    "name": "boop"
+                }
+            ]
+        },
+        {
+            "name": "Test",
+            "fields": [
+                {
+                    "type": "array array int",
+                    "name": "testing"
+                },
+                {
+                    "type": "array str",
+                    "name": "testing2"
+                },
+                {
+                    "type": "array int",
+                    "name": "testing3"
+                }
+            ]
+        }
+    ]
+}
