@@ -8,6 +8,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin/gen"
 	"github.com/nanoteck137/pyrin/gen/gogen"
+	"github.com/nanoteck137/pyrin/gen/jsgen"
 	"github.com/nanoteck137/pyrin/resolve"
 )
 
@@ -137,6 +138,7 @@ type Config struct {
 func main() {
 	stack := gen.GeneratorStack{}
 	stack.AddGenerator(&gogen.GoGenerator{})
+	stack.AddGenerator(&jsgen.JsGenerator{})
 
 	data, err := os.ReadFile("./test.json")
 	if err != nil {
