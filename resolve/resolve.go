@@ -145,7 +145,7 @@ func (resolver *Resolver) Resolve(name string) (any, error) {
 }
 
 func (resolver *Resolver) ResolveAll() error {
-	for n, _ := range resolver.Structs {
+	for n := range resolver.Structs {
 		_, err := resolver.Resolve(n)
 		if err != nil {
 			return err
