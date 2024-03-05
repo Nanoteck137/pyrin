@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/nanoteck137/pyrin/resolve"
@@ -13,20 +14,22 @@ type Options struct {
 	Output string
 }
 
-func DefaultOptions() Options {
-	return Options{
-		Output: "./src/types/types.js",
-	}
-}
-
 type Generator struct {
 	options Options
 }
 
-func New(options Options) *Generator {
-	return &Generator{
-		options: options,
+func New(options ...Options) *Generator {
+	gen := &Generator{}
+
+	if len(options) > 0 {
+		gen.options = options[0]
 	}
+
+	if gen.options.Output == "" {
+		gen.options.Output = "./src/types/types.js"
+	}
+
+	return gen
 }
 
 func (gen *Generator) Name() string {
@@ -68,7 +71,13 @@ func (gen *Generator) Generate(resolver *resolve.Resolver) error {
 		fmt.Fprintln(&b)
 	}
 
-	err := os.WriteFile("./types.js", []byte(b.String()), 0644)
+	dir := path.Dir(gen.options.Output)
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(gen.options.Output, []byte(b.String()), 0644)
 	if err != nil {
 		return err
 	}

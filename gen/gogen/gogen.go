@@ -16,21 +16,26 @@ type Options struct {
 	Output string
 }
 
-func DefaultOptions() Options {
-	return Options{
-		PackageName: "types",
-		Output:      "./types/types.go",
-	}
-}
-
 type Generator struct {
 	options Options
 }
 
-func New(Options Options) *Generator {
-	return &Generator{
-		options: Options,
+func New(options ...Options) *Generator {
+	gen := &Generator{}
+
+	if len(options) > 0 {
+		gen.options = options[0]
 	}
+
+	if gen.options.PackageName == "" {
+		gen.options.PackageName = "types"
+	}
+
+	if gen.options.Output == "" {
+		gen.options.Output = "./types/types.go"
+	}
+
+	return gen
 }
 
 func (gen *Generator) Name() string {
