@@ -22,6 +22,7 @@ type TypespecIdent struct {
 
 type TypeString struct{}
 type TypeInt struct{}
+type TypeBoolean struct{}
 type TypeArray struct {
 	ElementType any
 }
@@ -68,6 +69,7 @@ func New() *Resolver {
 
 	resolver.Types["int"] = TypeInt{}
 	resolver.Types["string"] = TypeString{}
+	resolver.Types["boolean"] = TypeBoolean{}
 
 	return resolver
 }

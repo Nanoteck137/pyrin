@@ -42,6 +42,8 @@ func GenerateType(w io.Writer, ty any) {
 		fmt.Fprint(w, "z.string()")
 	case resolve.TypeInt:
 		fmt.Fprint(w, "z.number()")
+	case resolve.TypeBoolean:
+		fmt.Fprint(w, "z.boolean()")
 	case resolve.TypeArray:
 		fmt.Fprint(w, "z.array(")
 		GenerateType(w, t.ElementType)

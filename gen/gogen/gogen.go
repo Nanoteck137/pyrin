@@ -81,6 +81,8 @@ func GenerateType(typ any) string {
 		return "string"
 	case resolve.TypeInt:
 		return "int"
+	case resolve.TypeBoolean:
+		return "bool"
 	case resolve.TypeStruct:
 		return t.Name
 	case resolve.TypeArray:
