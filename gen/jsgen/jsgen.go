@@ -3,14 +3,33 @@ package jsgen
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/nanoteck137/pyrin/resolve"
 )
 
-type JsGenerator struct{}
+type Options struct {
+	Output string
+}
 
-func (gen *JsGenerator) Name() string {
+func DefaultOptions() Options {
+	return Options{
+		Output: "./src/types/types.js",
+	}
+}
+
+type Generator struct {
+	options Options
+}
+
+func New(options Options) *Generator {
+	return &Generator{
+		options: options,
+	}
+}
+
+func (gen *Generator) Name() string {
 	return "JsGenerator"
 }
 
@@ -35,7 +54,7 @@ func GenerateField(w io.Writer, field *resolve.Field) {
 	fmt.Fprintln(w, ",")
 }
 
-func (gen *JsGenerator) Generate(resolver *resolve.Resolver) error {
+func (gen *Generator) Generate(resolver *resolve.Resolver) error {
 	var b strings.Builder
 
 	for _, s := range resolver.ResolvedStructs {
@@ -49,7 +68,10 @@ func (gen *JsGenerator) Generate(resolver *resolve.Resolver) error {
 		fmt.Fprintln(&b)
 	}
 
-	fmt.Println(b.String())
+	err := os.WriteFile("./types.js", []byte(b.String()), 0644)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
