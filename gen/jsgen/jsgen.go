@@ -26,7 +26,7 @@ func New(options ...Options) *Generator {
 	}
 
 	if gen.options.Output == "" {
-		gen.options.Output = "./src/types/types.js"
+		gen.options.Output = "./src/types/types.ts"
 	}
 
 	return gen
