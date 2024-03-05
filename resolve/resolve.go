@@ -144,6 +144,17 @@ func (resolver *Resolver) Resolve(name string) (any, error) {
 	return s.Type, nil
 }
 
+func (resolver *Resolver) ResolveAll() error {
+	for n, _ := range resolver.Structs {
+		_, err := resolver.Resolve(n)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 //
 // // func ResolveConfig(config *Config) ([]*ResolvedStruct, error) {
 // // 	resolver := &Resolver{
