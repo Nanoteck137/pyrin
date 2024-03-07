@@ -38,6 +38,8 @@ var genGoCmd = &cobra.Command{
 			resolver.AddSymbolDecl(decl)
 		}
 
+		resolver.ResolveAll()
+
 		generator := gogen.New(gogen.Options{
 			PackageName: pkg,
 			Output:      output,
