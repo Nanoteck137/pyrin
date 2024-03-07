@@ -13,8 +13,19 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+
+        pyrin = pkgs.buildGoModule {
+          pname = "pyrin";
+          version = self.shortRev or "dirty";
+          src = ./.;
+
+          vendorHash = "sha256-BkZx48XDdtMXEljRI01sJm/Kqov4PZW8TH+F11JpfvQ=";
+        };
       in
       {
+        packages.default = pyrin;
+        packages.pyrin = pyrin;
+
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             go
