@@ -8,8 +8,8 @@ import (
 	"github.com/nanoteck137/pyrin/gen"
 	"github.com/nanoteck137/pyrin/gen/gogen"
 	"github.com/nanoteck137/pyrin/gen/jsgen"
+	"github.com/nanoteck137/pyrin/parser"
 	"github.com/nanoteck137/pyrin/resolve"
-	"github.com/nanoteck137/servine/parser"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package resolve
 import (
 	"fmt"
 
-	"github.com/nanoteck137/servine/ast"
+	"github.com/nanoteck137/pyrin/ast"
 )
 
 type SymbolState int
