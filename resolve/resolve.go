@@ -2,6 +2,8 @@ package resolve
 
 import (
 	"fmt"
+
+	"github.com/nanoteck137/servine/ast"
 )
 
 type SymbolState int
@@ -12,88 +14,75 @@ const (
 	SymbolResolved
 )
 
-type TypespecArray struct {
-	Element any
-}
-
-type TypespecIdent struct {
-	Ident string
+type Type interface {
+	typeType()
 }
 
 type TypeString struct{}
 type TypeInt struct{}
 type TypeBoolean struct{}
 type TypeArray struct {
-	ElementType any
+	ElementType Type
 }
 
 type Field struct {
 	Name string
-	Type any
+	Type Type
 }
 
 type TypeStruct struct {
-	Name string
+	Name   string
 	Fields []Field
 }
 
-type FieldDecl struct {
-	Name string
-	Typespec any
-}
+func (t *TypeString) typeType()  {}
+func (t *TypeInt) typeType()     {}
+func (t *TypeBoolean) typeType() {}
+func (t *TypeArray) typeType()   {}
+func (t *TypeStruct) typeType()  {}
 
-type StructDecl struct {
-	Name string
-	Fields []FieldDecl
-}
-
-
-type Struct struct {
+type Symbol struct {
 	State SymbolState
-	Decl StructDecl
-	Type  any
+	Name  string
+	Decl  ast.Decl
+	Type  Type
 }
 
 type Resolver struct {
-	Types map[string]any
-
-	Structs map[string]*Struct
-	ResolvedStructs []*Struct
+	Symbols         []*Symbol
+	ResolvedStructs []*Symbol
 }
 
 func New() *Resolver {
-	resolver := &Resolver{
-		Types:   map[string]any{},
-		Structs: make(map[string]*Struct),
-	}
+	resolver := &Resolver{}
 
-	resolver.Types["int"] = TypeInt{}
-	resolver.Types["string"] = TypeString{}
-	resolver.Types["boolean"] = TypeBoolean{}
+	resolver.AddType("int", &TypeInt{})
+	resolver.AddType("string", &TypeString{})
+	resolver.AddType("bool", &TypeBoolean{})
 
 	return resolver
 }
 
-func (resolver *Resolver) ResolveTypespec(typespec any) (any, error) {
+func (resolver *Resolver) ResolveTypespec(typespec any) (Type, error) {
 	switch t := typespec.(type) {
-	case TypespecIdent:
+	case *ast.IdentTypespec:
 		return resolver.Resolve(t.Ident)
-	case TypespecArray:
+	case *ast.ArrayTypespec:
 		elementTy, err := resolver.ResolveTypespec(t.Element)
 		if err != nil {
 			return nil, err
 		}
 
-		return TypeArray{
+		return &TypeArray{
 			ElementType: elementTy,
 		}, nil
+	default:
+		panic("Unknown typespec")
 	}
-
-	return nil, nil
 }
 
-func (resolver *Resolver) ResolveField(field FieldDecl) (Field, error) {
-	ty, err := resolver.ResolveTypespec(field.Typespec)
+func (resolver *Resolver) ResolveField(field *ast.Field) (Field, error) {
+	ty, err := resolver.ResolveTypespec(field.Type)
 	if err != nil {
 		return Field{}, err
 	}
@@ -104,12 +93,18 @@ func (resolver *Resolver) ResolveField(field FieldDecl) (Field, error) {
 	}, nil
 }
 
-func (resolver *Resolver) Resolve(name string) (any, error) {
-	if ty, exists := resolver.Types[name]; exists {
-		return ty, nil
+func (resolver *Resolver) GetSymbol(name string) (*Symbol, bool) {
+	for _, s := range resolver.Symbols {
+		if s.Name == name {
+			return s, true
+		}
 	}
 
-	s, exists := resolver.Structs[name]
+	return nil, false
+}
+
+func (resolver *Resolver) Resolve(name string) (Type, error) {
+	s, exists := resolver.GetSymbol(name)
 	if !exists {
 		return nil, fmt.Errorf("'%s' don't exist", name)
 	}
@@ -124,21 +119,35 @@ func (resolver *Resolver) Resolve(name string) (any, error) {
 
 	s.State = SymbolResolving
 
-	var fields []Field
+	switch decl := s.Decl.(type) {
+	case *ast.StructDecl:
+		if decl.Extend != "" {
+			ty, err := resolver.Resolve(decl.Extend)
+			if err != nil {
+				return nil, err
+			}
 
-	for _, f := range s.Decl.Fields {
-		f, err := resolver.ResolveField(f)
-		if err != nil {
-			return nil, err
+			// TODO(patrik): Resolve fields
+
+			s.State = SymbolResolved
+			s.Type = ty
+		} else {
+			var fields []Field
+			for _, f := range decl.Fields {
+				f, err := resolver.ResolveField(f)
+				if err != nil {
+					return nil, err
+				}
+
+				fields = append(fields, f)
+			}
+
+			s.State = SymbolResolved
+			s.Type = &TypeStruct{
+				Name:   decl.Name,
+				Fields: fields,
+			}
 		}
-
-		fields = append(fields, f)
-	}
-
-	s.State = SymbolResolved
-	s.Type = TypeStruct{
-		Name: s.Decl.Name,
-		Fields: fields,
 	}
 
 	resolver.ResolvedStructs = append(resolver.ResolvedStructs, s)
@@ -147,8 +156,8 @@ func (resolver *Resolver) Resolve(name string) (any, error) {
 }
 
 func (resolver *Resolver) ResolveAll() error {
-	for n := range resolver.Structs {
-		_, err := resolver.Resolve(n)
+	for _, s := range resolver.Symbols {
+		_, err := resolver.Resolve(s.Name)
 		if err != nil {
 			return err
 		}
@@ -157,18 +166,24 @@ func (resolver *Resolver) ResolveAll() error {
 	return nil
 }
 
-//
-// // func ResolveConfig(config *Config) ([]*ResolvedStruct, error) {
-// // 	resolver := &Resolver{
-// // 		config: config,
-// // 	}
-// //
-// // 	for _, s := range config.Structs {
-// // 		_, err := resolver.ResolveStruct(s.Name)
-// // 		if err != nil {
-// // 			return nil, err
-// // 		}
-// // 	}
-// //
-// // 	return resolver.ResolvedStructs, nil
-// // }
+func (resolver *Resolver) AddSymbol(sym *Symbol) {
+	resolver.Symbols = append(resolver.Symbols, sym)
+}
+
+func (resolver *Resolver) AddSymbolDecl(decl ast.Decl) {
+	switch decl := decl.(type) {
+	case *ast.StructDecl:
+		resolver.AddSymbol(&Symbol{
+			Name: decl.Name,
+			Decl: decl,
+		})
+	}
+}
+
+func (resolver *Resolver) AddType(name string, ty Type) {
+	resolver.AddSymbol(&Symbol{
+		State: SymbolResolved,
+		Name:  name,
+		Type:  ty,
+	})
+}

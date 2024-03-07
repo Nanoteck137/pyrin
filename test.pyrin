@@ -1,0 +1,56 @@
+Artist {
+    id string;
+    name string;
+    picture string;
+}
+
+Album {
+    id string;
+    name string;
+    coverArt string;
+    artistId string;
+}
+
+Track {
+    id string;
+    number int;
+    name string;
+    coverArt string;
+    duration int;
+    bestQualityFile string;
+    mobileQualityFile string;
+    albumId string;
+    artistId string;
+    albumName string;
+    artistName string;
+}
+
+GetArtists {
+    artists []Artist;
+}
+
+GetArtistById :: Artist {}
+
+GetArtistAlbumsById {
+    albums []Album;
+}
+
+GetAlbums {
+    albums []Album;
+}
+
+GetAlbumById :: Album {}
+
+GetAlbumTracksById {
+    tracks []Track;
+}
+
+GetTracks {
+    tracks []Track;
+}
+
+GetTrackById :: Track {}
+
+GetSync {
+    isSyncing bool;
+}

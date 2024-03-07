@@ -1,51 +1,106 @@
 {
     "structs": [
         {
-            "name": "GetAlbums",
-            "fields": [
-                {
-                    "type": "array Album",
-                    "name": "albums"
-                }
-            ]
+            "name": "Artist",
+            "fields": {
+                "id": "str",
+                "name": "str",
+                "picture": "str"
+            }
         },
         {
             "name": "Album",
-            "fields": [
-                {
-                    "type": "string",
-                    "name": "id"
-                },
-                {
-                    "type": "string",
-                    "name": "name"
-                },
-                {
-                    "type": "string",
-                    "name": "coverArt"
-                },
-                {
-                    "type": "Test",
-                    "name": "boop"
-                }
-            ]
+            "fields": {
+                "id": "str",
+                "name": "str",
+                "coverArt": "str",
+                "artistId": "str"
+            }
         },
         {
-            "name": "Test",
-            "fields": [
-                {
-                    "type": "array array int",
-                    "name": "testing"
-                },
-                {
-                    "type": "array str",
-                    "name": "testing2"
-                },
-                {
-                    "type": "array int",
-                    "name": "testing3"
-                }
-            ]
+            "name": "Track",
+            "fields": {
+                "id": "str",
+                "number": "int",
+                "name": "str",
+                "coverArt": "str",
+                "duration": "int",
+                "bestQualityFile": "str",
+                "mobileQualityFile": "str",
+                "albumId": "str",
+                "artistId": "str",
+                "albumName": "str",
+                "artistName": "str"
+            }
+        },
+        {
+            "name": "GetArtists",
+            "fields": {
+                "artists": "array Artist"
+            }
+        },
+        {
+            "name": "GetArtistById",
+            "fields": {
+                "id": "str",
+                "name": "str",
+                "picture": "str"
+            }
+        },
+        {
+            "name": "GetArtistAlbumsById",
+            "fields": {
+                "albums": "array Album"
+            }
+        },
+        {
+            "name": "GetAlbums",
+            "fields": {
+                "albums": "array Album"
+            }
+        },
+        {
+            "name": "GetAlbumById",
+            "fields": {
+                "id": "str",
+                "name": "str",
+                "coverArt": "str",
+                "artistId": "str"
+            }
+        },
+        {
+            "name": "GetAlbumTracksById",
+            "fields": {
+                "tracks": "array Track"
+            }
+        },
+        {
+            "name": "GetTracks",
+            "fields": {
+                "tracks": "array Track"
+            }
+        },
+        {
+            "name": "GetTrackById",
+            "fields": {
+                "id": "str",
+                "number": "int",
+                "name": "str",
+                "coverArt": "str",
+                "duration": "int",
+                "bestQualityFile": "str",
+                "mobileQualityFile": "str",
+                "albumId": "str",
+                "artistId": "str",
+                "albumName": "str",
+                "artistName": "str"
+            }
+        },
+        {
+            "name": "GetSync",
+            "fields": {
+                "isSyncing": "bool"
+            }
         }
     ]
 }

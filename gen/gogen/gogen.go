@@ -50,9 +50,9 @@ func (gen *Generator) Generate(resolver *resolve.Resolver) error {
 	fmt.Fprintln(&b)
 
 	for _, s := range resolver.ResolvedStructs {
-		fmt.Fprintf(&b, "type %s struct {\n", s.Decl.Name)
+		fmt.Fprintf(&b, "type %s struct {\n", s.Name)
 
-		st := s.Type.(resolve.TypeStruct)
+		st := s.Type.(*resolve.TypeStruct)
 		for _, f := range st.Fields {
 			GenerateField(&b, &f)
 		}
@@ -75,17 +75,17 @@ func (gen *Generator) Generate(resolver *resolve.Resolver) error {
 	return nil
 }
 
-func GenerateType(typ any) string {
+func GenerateType(typ resolve.Type) string {
 	switch t := typ.(type) {
-	case resolve.TypeString:
+	case *resolve.TypeString:
 		return "string"
-	case resolve.TypeInt:
+	case *resolve.TypeInt:
 		return "int"
-	case resolve.TypeBoolean:
+	case *resolve.TypeBoolean:
 		return "bool"
-	case resolve.TypeStruct:
+	case *resolve.TypeStruct:
 		return t.Name
-	case resolve.TypeArray:
+	case *resolve.TypeArray:
 		return "[]"+GenerateType(t.ElementType)
 	}
 

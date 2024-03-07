@@ -36,19 +36,19 @@ func (gen *Generator) Name() string {
 	return "JsGenerator"
 }
 
-func GenerateType(w io.Writer, ty any) {
+func GenerateType(w io.Writer, ty resolve.Type) {
 	switch t := ty.(type) {
-	case resolve.TypeString:
+	case *resolve.TypeString:
 		fmt.Fprint(w, "z.string()")
-	case resolve.TypeInt:
+	case *resolve.TypeInt:
 		fmt.Fprint(w, "z.number()")
-	case resolve.TypeBoolean:
+	case *resolve.TypeBoolean:
 		fmt.Fprint(w, "z.boolean()")
-	case resolve.TypeArray:
+	case *resolve.TypeArray:
 		fmt.Fprint(w, "z.array(")
 		GenerateType(w, t.ElementType)
 		fmt.Fprint(w, ")")
-	case resolve.TypeStruct:
+	case *resolve.TypeStruct:
 		fmt.Fprint(w, t.Name)
 	}
 }
@@ -63,13 +63,13 @@ func (gen *Generator) Generate(resolver *resolve.Resolver) error {
 	var b strings.Builder
 
 	for _, s := range resolver.ResolvedStructs {
-		fmt.Fprintf(&b, "export const %s = z.object({\n", s.Decl.Name)
-		st := s.Type.(resolve.TypeStruct)
+		fmt.Fprintf(&b, "export const %s = z.object({\n", s.Name)
+		st := s.Type.(*resolve.TypeStruct)
 		for _, f := range st.Fields {
 			GenerateField(&b, &f)
 		}
 		fmt.Fprintln(&b, "});")
-		fmt.Fprintf(&b, "export type %s = z.infer<typeof %s>;\n", s.Decl.Name, s.Decl.Name)
+		fmt.Fprintf(&b, "export type %s = z.infer<typeof %s>;\n", s.Name, s.Name)
 		fmt.Fprintln(&b)
 	}
 
