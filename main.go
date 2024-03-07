@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/kr/pretty"
+	"github.com/nanoteck137/pyrin/cmd"
 	"github.com/nanoteck137/pyrin/gen"
 	"github.com/nanoteck137/pyrin/gen/gogen"
 	"github.com/nanoteck137/pyrin/gen/jsgen"
@@ -13,6 +14,10 @@ import (
 )
 
 func main() {
+	cmd.Execute()
+
+	return
+
 	file, err := os.Open("./test.pyrin")
 	if err != nil {
 		log.Fatal(err)
