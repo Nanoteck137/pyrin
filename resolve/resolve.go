@@ -35,11 +35,16 @@ type TypeStruct struct {
 	Fields []Field
 }
 
-func (t *TypeString) typeType()  {}
-func (t *TypeInt) typeType()     {}
-func (t *TypeBoolean) typeType() {}
-func (t *TypeArray) typeType()   {}
-func (t *TypeStruct) typeType()  {}
+type TypeSameStruct struct {
+	Type *TypeStruct
+}
+
+func (t *TypeString) typeType()     {}
+func (t *TypeInt) typeType()        {}
+func (t *TypeBoolean) typeType()    {}
+func (t *TypeArray) typeType()      {}
+func (t *TypeStruct) typeType()     {}
+func (t *TypeSameStruct) typeType() {}
 
 type Symbol struct {
 	State SymbolState
@@ -63,7 +68,7 @@ func New() *Resolver {
 	return resolver
 }
 
-func (resolver *Resolver) ResolveTypespec(typespec any) (Type, error) {
+func (resolver *Resolver) ResolveTypespec(typespec ast.Typespec) (Type, error) {
 	switch t := typespec.(type) {
 	case *ast.IdentTypespec:
 		return resolver.Resolve(t.Ident)
@@ -127,10 +132,53 @@ func (resolver *Resolver) Resolve(name string) (Type, error) {
 				return nil, err
 			}
 
-			// TODO(patrik): Resolve fields
+			st, ok := ty.(*TypeStruct)
+			if !ok {
+				return nil, fmt.Errorf("Extend needs to be a struct '%s'", decl.Extend)
+			}
 
-			s.State = SymbolResolved
-			s.Type = ty
+			if len(decl.Fields) == 0 {
+				s.State = SymbolResolved
+				s.Type = &TypeSameStruct{
+					Type: st,
+				}
+			} else {
+				fields := make([]Field, len(st.Fields))
+				copy(fields, st.Fields)
+
+				for _, df := range decl.Fields {
+					found := false
+					index := 0
+					for i, f := range fields {
+						if df.Name == f.Name {
+							found = true
+							index = i
+							break
+						}
+					}
+
+					ty, err := resolver.ResolveTypespec(df.Type)
+					if err != nil {
+						return nil, err
+					}
+
+					if found {
+						fields[index].Type = ty
+					} else {
+						fields = append(fields, Field{
+							Name: df.Name,
+							Type: ty,
+						})
+					}
+				}
+
+				s.State = SymbolResolved
+				s.Type = &TypeStruct{
+					Name:   decl.Name,
+					Fields: fields,
+				}
+			}
+
 		} else {
 			var fields []Field
 			for _, f := range decl.Fields {

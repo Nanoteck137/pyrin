@@ -40,7 +40,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	pretty.Println(resolver)
+	// pretty.Println(resolver)
 
 	stack := gen.GeneratorStack{}
 	stack.AddGenerator(gogen.New(gogen.Options{

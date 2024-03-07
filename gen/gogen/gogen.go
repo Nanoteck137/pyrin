@@ -13,7 +13,7 @@ import (
 
 type Options struct {
 	PackageName string
-	Output string
+	Output      string
 }
 
 type Generator struct {
@@ -50,15 +50,21 @@ func (gen *Generator) Generate(resolver *resolve.Resolver) error {
 	fmt.Fprintln(&b)
 
 	for _, s := range resolver.ResolvedStructs {
-		fmt.Fprintf(&b, "type %s struct {\n", s.Name)
+		switch ty := s.Type.(type) {
+		case *resolve.TypeStruct:
+			fmt.Fprintf(&b, "type %s struct {\n", s.Name)
 
-		st := s.Type.(*resolve.TypeStruct)
-		for _, f := range st.Fields {
-			GenerateField(&b, &f)
+			for _, f := range ty.Fields {
+				GenerateField(&b, &f)
+			}
+
+			fmt.Fprintln(&b, "}")
+			fmt.Fprintln(&b)
+		case *resolve.TypeSameStruct:
+			fmt.Fprintf(&b, "type %s %s\n", s.Name, ty.Type.Name)
+			fmt.Fprintln(&b)
 		}
 
-		fmt.Fprintln(&b, "}");
-		fmt.Fprintln(&b)
 	}
 
 	dir := path.Dir(gen.options.Output)
@@ -86,7 +92,7 @@ func GenerateType(typ resolve.Type) string {
 	case *resolve.TypeStruct:
 		return t.Name
 	case *resolve.TypeArray:
-		return "[]"+GenerateType(t.ElementType)
+		return "[]" + GenerateType(t.ElementType)
 	}
 
 	return ""
@@ -96,5 +102,5 @@ func GenerateField(w io.Writer, field *resolve.Field) {
 	jsonName := field.Name
 	name := strcase.ToCamel(field.Name)
 
-	fmt.Fprintf(w, "\t%s %s `json:\"%s\"`\n", name, GenerateType(field.Type), jsonName);
+	fmt.Fprintf(w, "\t%s %s `json:\"%s\"`\n", name, GenerateType(field.Type), jsonName)
 }

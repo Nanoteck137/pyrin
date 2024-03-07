@@ -49,8 +49,14 @@ GetTracks {
     tracks []Track;
 }
 
-GetTrackById :: Track {}
+GetTrackById :: Track {
+    artistName int;
+}
 
 GetSync {
     isSyncing bool;
+}
+
+Test {
+    name string;
 }
