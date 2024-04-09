@@ -93,6 +93,8 @@ func (t *Tokenizer) NextToken() token.Token {
 			t.unread()
 			kind = token.Colon
 		}
+	case '*':
+		kind = token.Asterisk
 	}
 
 	return token.Token{

@@ -24,6 +24,9 @@ type TypeBoolean struct{}
 type TypeArray struct {
 	ElementType Type
 }
+type TypePtr struct {
+	BaseType Type
+}
 
 type Field struct {
 	Name string
@@ -43,6 +46,7 @@ func (t *TypeString) typeType()     {}
 func (t *TypeInt) typeType()        {}
 func (t *TypeBoolean) typeType()    {}
 func (t *TypeArray) typeType()      {}
+func (t *TypePtr) typeType()      {}
 func (t *TypeStruct) typeType()     {}
 func (t *TypeSameStruct) typeType() {}
 
@@ -80,6 +84,15 @@ func (resolver *Resolver) ResolveTypespec(typespec ast.Typespec) (Type, error) {
 
 		return &TypeArray{
 			ElementType: elementTy,
+		}, nil
+	case *ast.PtrTypespec:
+		baseTy, err := resolver.ResolveTypespec(t.Base)
+		if err != nil {
+			return nil, err
+		}
+
+		return &TypePtr{
+			BaseType: baseTy,
 		}, nil
 	default:
 		panic("Unknown typespec")

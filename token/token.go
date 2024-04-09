@@ -15,6 +15,7 @@ const (
 	Semicolon
 	Colon
 	DoubleColon
+	Asterisk
 
 	Unset
 

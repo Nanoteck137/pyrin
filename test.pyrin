@@ -60,3 +60,8 @@ GetSync {
 Test {
     name string;
 }
+
+Test2 {
+    test *Test;
+    test2 **int;
+}

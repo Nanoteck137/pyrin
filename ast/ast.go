@@ -16,8 +16,13 @@ type ArrayTypespec struct {
 	Element Typespec
 }
 
+type PtrTypespec struct {
+	Base Typespec
+}
+
 func (ty *IdentTypespec) typespecType() {}
 func (ty *ArrayTypespec) typespecType() {}
+func (ty *PtrTypespec) typespecType() {}
 
 type Field struct {
 	Name  string

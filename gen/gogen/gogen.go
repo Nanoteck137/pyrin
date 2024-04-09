@@ -93,6 +93,8 @@ func GenerateType(typ resolve.Type) string {
 		return t.Name
 	case *resolve.TypeArray:
 		return "[]" + GenerateType(t.ElementType)
+	case *resolve.TypePtr:
+		return "*" + GenerateType(t.BaseType)
 	}
 
 	return ""

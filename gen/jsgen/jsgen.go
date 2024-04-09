@@ -48,6 +48,8 @@ func GenerateType(w io.Writer, ty resolve.Type) {
 		fmt.Fprint(w, "z.array(")
 		GenerateType(w, t.ElementType)
 		fmt.Fprint(w, ")")
+	case *resolve.TypePtr:
+		GenerateType(w, t.BaseType)
 	case *resolve.TypeStruct:
 		fmt.Fprint(w, t.Name)
 	}

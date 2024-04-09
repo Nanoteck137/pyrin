@@ -73,6 +73,13 @@ func (p *Parser) parseTypespec() ast.Typespec {
 		return &ast.ArrayTypespec{
 			Element: elementTy,
 		}
+	case token.Asterisk:
+		p.next()
+		base := p.parseTypespec()
+
+		return &ast.PtrTypespec{
+			Base: base,
+		}
 	}
 
 	p.error(fmt.Sprintf("Unknown token for type: %v", p.token.Kind))
