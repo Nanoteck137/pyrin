@@ -104,5 +104,10 @@ func GenerateField(w io.Writer, field *resolve.Field) {
 	jsonName := field.Name
 	name := strcase.ToCamel(field.Name)
 
-	fmt.Fprintf(w, "\t%s %s `json:\"%s\"`\n", name, GenerateType(field.Type), jsonName)
+	switch field.Type.(type) {
+	case *resolve.TypePtr:
+		fmt.Fprintf(w, "\t%s %s `json:\"%s,omitempty\"`\n", name, GenerateType(field.Type), jsonName)
+	default:
+		fmt.Fprintf(w, "\t%s %s `json:\"%s\"`\n", name, GenerateType(field.Type), jsonName)
+	}
 }
