@@ -22,7 +22,12 @@
           version = fullVersion;
           src = ./.;
 
-          vendorHash = "sha256-jKYbQ54+bmLHej5IYg2YkreQa9xMVTLPTLRJY91v97M=";
+          ldflags = [
+            "-X github.com/nanoteck137/pyrin/cmd.Version=${version}"
+            "-X github.com/nanoteck137/pyrin/cmd.Commit=${self.dirtyRev or self.rev or "no-commit"}"
+          ];
+
+          vendorHash = "sha256-YStNcVhK9l1IF1F5OWHubEzkqZempK71HAUntPXeGak=";
         };
       in
       {

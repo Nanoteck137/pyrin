@@ -1,13 +1,19 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/spf13/cobra"
 )
 
+var AppName = "pyrin"
+var Version = "no-version"
+var Commit = "no-commit"
+
 var rootCmd = &cobra.Command{
-	Use: "pyrin",
+	Use:     AppName,
+	Version: Version,
 }
 
 func Execute() {
@@ -15,4 +21,14 @@ func Execute() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func versionTemplate() string {
+	return fmt.Sprintf(
+		"%s: %s (%s)\n",
+		AppName, Version, Commit)
+}
+
+func init() {
+	rootCmd.SetVersionTemplate(versionTemplate())
 }
