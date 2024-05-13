@@ -70,7 +70,7 @@ type Test struct {
 
 type Test2 struct {
 	Test  *Test `json:"test"`
-	Test2 int `json:"test2,omitempty"`
+	Test2 int   `json:"test2,omitempty"`
 }
 
 // TODO(patrik): This is not working

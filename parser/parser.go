@@ -52,6 +52,7 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 		}
 
 		jsonName := ""
+		omit := false
 
 		if field.Tag != nil {
 			lit, err := strconv.Unquote(field.Tag.Value)
@@ -69,6 +70,7 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 			tag, err := tags.Get("json")
 			if err == nil {
 				jsonName = tag.Name
+				omit = tag.HasOption("omitempty")
 			}
 		}
 
@@ -86,9 +88,9 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 		}
 
 		fields = append(fields, &ast.Field{
-			Name:  name,
-			Type:  ty,
-			Unset: false,
+			Name: name,
+			Type: ty,
+			Omit: omit,
 		})
 	}
 

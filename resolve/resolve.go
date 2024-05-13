@@ -31,6 +31,7 @@ type TypePtr struct {
 type Field struct {
 	Name string
 	Type Type
+	Optional bool
 }
 
 type TypeStruct struct {
@@ -106,8 +107,9 @@ func (resolver *Resolver) ResolveField(field *ast.Field) (Field, error) {
 	}
 
 	return Field{
-		Name: field.Name,
-		Type: ty,
+		Name:     field.Name,
+		Type:     ty,
+		Optional: field.Omit,
 	}, nil
 }
 

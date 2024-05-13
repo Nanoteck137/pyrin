@@ -59,6 +59,9 @@ func GenerateType(w io.Writer, ty resolve.Type) {
 func GenerateField(w io.Writer, field *resolve.Field) {
 	fmt.Fprint(w, "  ", field.Name, ": ")
 	GenerateType(w, field.Type)
+	if field.Optional {
+		fmt.Fprint(w, ".optional()")
+	}
 	fmt.Fprintln(w, ",")
 }
 
