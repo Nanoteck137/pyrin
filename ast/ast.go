@@ -22,12 +22,12 @@ type PtrTypespec struct {
 
 func (ty *IdentTypespec) typespecType() {}
 func (ty *ArrayTypespec) typespecType() {}
-func (ty *PtrTypespec) typespecType() {}
+func (ty *PtrTypespec) typespecType()   {}
 
 type Field struct {
-	Name  string
-	Type  Typespec
-	Unset bool
+	Name string
+	Type Typespec
+	Omit bool
 }
 
 type StructDecl struct {

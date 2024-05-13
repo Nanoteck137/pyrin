@@ -19,6 +19,7 @@ type Type interface {
 }
 
 type TypeString struct{}
+// TODO(patrik): Rename to number, or have bit size
 type TypeInt struct{}
 type TypeBoolean struct{}
 type TypeArray struct {
@@ -29,8 +30,9 @@ type TypePtr struct {
 }
 
 type Field struct {
-	Name string
-	Type Type
+	Name     string
+	Type     Type
+	Optional bool
 }
 
 type TypeStruct struct {
@@ -46,7 +48,7 @@ func (t *TypeString) typeType()     {}
 func (t *TypeInt) typeType()        {}
 func (t *TypeBoolean) typeType()    {}
 func (t *TypeArray) typeType()      {}
-func (t *TypePtr) typeType()      {}
+func (t *TypePtr) typeType()        {}
 func (t *TypeStruct) typeType()     {}
 func (t *TypeSameStruct) typeType() {}
 
@@ -66,6 +68,17 @@ func New() *Resolver {
 	resolver := &Resolver{}
 
 	resolver.AddType("int", &TypeInt{})
+	resolver.AddType("int8", &TypeInt{})
+	resolver.AddType("int16", &TypeInt{})
+	resolver.AddType("int32", &TypeInt{})
+	resolver.AddType("int64", &TypeInt{})
+
+	resolver.AddType("uint", &TypeInt{})
+	resolver.AddType("uint8", &TypeInt{})
+	resolver.AddType("uint16", &TypeInt{})
+	resolver.AddType("uint32", &TypeInt{})
+	resolver.AddType("uint64", &TypeInt{})
+
 	resolver.AddType("string", &TypeString{})
 	resolver.AddType("bool", &TypeBoolean{})
 
@@ -106,8 +119,9 @@ func (resolver *Resolver) ResolveField(field *ast.Field) (Field, error) {
 	}
 
 	return Field{
-		Name: field.Name,
-		Type: ty,
+		Name:     field.Name,
+		Type:     ty,
+		Optional: field.Omit,
 	}, nil
 }
 
