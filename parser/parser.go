@@ -7,7 +7,9 @@ import (
 	"go/scanner"
 	"go/token"
 	"log"
+	"strconv"
 
+	"github.com/fatih/structtag"
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin/ast"
 )
@@ -39,7 +41,7 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 
 	for _, field := range ty.Fields.List {
 		if field.Names == nil {
-			// TODO(patrik): Add error when multiple embedded structs is detected 
+			// TODO(patrik): Add error when multiple embedded structs is detected
 			if extend == "" {
 				if ident, ok := field.Type.(*goast.Ident); ok {
 					extend = ident.Name
@@ -49,15 +51,45 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 			continue
 		}
 
+		jsonName := ""
+
+		if field.Tag != nil {
+			lit, err := strconv.Unquote(field.Tag.Value)
+			if err != nil {
+				// TODO(patrik): Remove
+				log.Fatal(err)
+			}
+
+			tags, err := structtag.Parse(lit)
+			if err != nil {
+				// TODO(patrik): Remove
+				log.Fatal(err)
+			}
+
+			tag, err := tags.Get("json")
+			if err == nil {
+				jsonName = tag.Name
+			}
+		}
+
 		ty := parseTypespec(field.Type)
 
-		for _, name := range field.Names {
-			fields = append(fields, &ast.Field{
-				Name:  name.Name,
-				Type:  ty,
-				Unset: false,
-			})
+		// TODO(patrik): Better errors
+		if len(field.Names) > 1 {
+			log.Fatal("More then one name for field")
 		}
+
+		name := field.Names[0].Name
+
+		if jsonName != "" {
+			name = jsonName
+		}
+
+		fields = append(fields, &ast.Field{
+			Name:  name,
+			Type:  ty,
+			Unset: false,
+		})
 	}
 
 	return &ast.StructDecl{
