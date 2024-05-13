@@ -34,7 +34,10 @@ var genZodCmd = &cobra.Command{
 			resolver.AddSymbolDecl(decl)
 		}
 
-		resolver.ResolveAll()
+		err = resolver.ResolveAll()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		generator := zod.New(zod.Options{
 			Output: output,
