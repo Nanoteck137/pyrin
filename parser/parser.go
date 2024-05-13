@@ -1,159 +1,106 @@
 package parser
 
 import (
-	"fmt"
-	"io"
+	"errors"
+	goast "go/ast"
+	goparser "go/parser"
+	"go/scanner"
+	"go/token"
+	"log"
 
+	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin/ast"
-	"github.com/nanoteck137/pyrin/lexer"
-	"github.com/nanoteck137/pyrin/token"
 )
 
-type Error struct {
-	Message string
-}
-
-func (e *Error) Error() string {
-	return e.Message
-}
-
-type ErrorList []*Error
-
-func (p *ErrorList) Add(message string) {
-	*p = append(*p, &Error{
-		Message: message,
-	})
-}
-
-type Parser struct {
-	tokenizer *lexer.Tokenizer
-	token     token.Token
-	errors    ErrorList
-}
-
-func New(reader io.Reader) *Parser {
-	tokenizer := lexer.New(reader)
-
-	return &Parser{
-		tokenizer: tokenizer,
-		token:     tokenizer.NextToken(),
-	}
-}
-
-func (p *Parser) error(message string) {
-	p.errors.Add(message)
-}
-
-func (p *Parser) next() {
-	p.token = p.tokenizer.NextToken()
-}
-
-func (p *Parser) expect(token token.Kind) {
-	if p.token.Kind != token {
-		p.error(fmt.Sprintf("Expected token: %v got %v", token, p.token.Kind))
-	}
-
-	p.next()
-}
-
-func (p *Parser) parseTypespec() ast.Typespec {
-	switch p.token.Kind {
-	case token.Ident:
-		ident := p.token.Ident
-		p.next()
+func parseTypespec(ty goast.Expr) ast.Typespec {
+	switch ty := ty.(type) {
+	case *goast.Ident:
 		return &ast.IdentTypespec{
-			Ident: ident,
+			Ident: ty.Name,
 		}
-	case token.LBracket:
-		p.next()
-		p.expect(token.RBracket)
-
-		elementTy := p.parseTypespec()
-
-		return &ast.ArrayTypespec{
-			Element: elementTy,
-		}
-	case token.Asterisk:
-		p.next()
-		base := p.parseTypespec()
-
+	case *goast.StarExpr:
+		base := parseTypespec(ty.X)
 		return &ast.PtrTypespec{
 			Base: base,
 		}
-	}
-
-	p.error(fmt.Sprintf("Unknown token for type: %v", p.token.Kind))
-	return nil
-}
-
-func (p *Parser) parseStructField() *ast.Field {
-	name := p.token.Ident
-	p.expect(token.Ident)
-
-	var ty ast.Typespec
-	unset := false
-	if p.token.Kind == token.Unset {
-		p.next()
-		unset = true
-	} else {
-		ty = p.parseTypespec()
-	}
-
-	p.expect(token.Semicolon)
-	return &ast.Field{
-		Name:  name,
-		Type:  ty,
-		Unset: unset,
-	}
-}
-
-func (p *Parser) parseStructDecl() *ast.StructDecl {
-	name := p.token.Ident
-	p.next()
-
-	extend := ""
-
-	if p.token.Kind == token.DoubleColon {
-		p.next()
-
-		extend = p.token.Ident
-		p.expect(token.Ident)
-	}
-
-	p.expect(token.LBrace)
-
-	var fields []*ast.Field
-	for p.token.Kind == token.Ident {
-		field := p.parseStructField()
-		fields = append(fields, field)
-	}
-
-	p.expect(token.RBrace)
-
-	return &ast.StructDecl{
-		Name:   name,
-		Extend: extend,
-		Fields: fields,
-	}
-}
-
-func (p *Parser) ParseDecl() ast.Decl {
-	switch p.token.Kind {
-	case token.Ident:
-		return p.parseStructDecl()
-	default:
-		// TODO(patrik): Remove
-		panic("Unknown decl")
+	case *goast.ArrayType:
+		element := parseTypespec(ty.Elt)
+		return &ast.ArrayTypespec{
+			Element: element,
+		}
 	}
 
 	return nil
 }
 
-func (p *Parser) Parse() []ast.Decl {
+func Parse(source string) []ast.Decl {
+	fset := token.NewFileSet()
+
+	f, err := goparser.ParseFile(fset, "", source, goparser.ParseComments)
+	if err != nil {
+		var errorList scanner.ErrorList
+		if errors.As(err, &errorList) {
+			pretty.Println(errorList)
+			log.Fatal()
+		} else {
+			log.Fatal(err)
+		}
+	}
+
 	var decls []ast.Decl
-	for p.token.Kind != token.Eof {
-		decl := p.ParseDecl()
-		decls = append(decls, decl)
+
+	for _, d := range f.Decls {
+		switch d := d.(type) {
+		case *goast.GenDecl:
+			for _, spec := range d.Specs {
+				switch spec := spec.(type) {
+				case *goast.TypeSpec:
+					pretty.Println(spec)
+
+					switch ty := spec.Type.(type) {
+					case *goast.StructType:
+						var fields []*ast.Field
+						extend := ""
+
+						for _, field := range ty.Fields.List {
+							if field.Names == nil {
+								if extend == "" {
+									if ident, ok := field.Type.(*goast.Ident); ok {
+										extend = ident.Name
+									}
+								}
+
+								continue
+							}
+
+							var ty ast.Typespec
+
+							switch t := field.Type.(type) {
+							case *goast.Ident:
+								ty = &ast.IdentTypespec{
+									Ident: t.Name,
+								}
+							}
+
+							for _, name := range field.Names {
+
+								fields = append(fields, &ast.Field{
+									Name:  name.Name,
+									Type:  ty,
+									Unset: false,
+								})
+							}
+						}
+
+						decls = append(decls, &ast.StructDecl{
+							Name:   spec.Name.Name,
+							Extend: extend,
+							Fields: fields,
+						})
+					}
+				}
+			}
+		}
 	}
 
 	return decls
