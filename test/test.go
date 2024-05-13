@@ -73,6 +73,19 @@ type Test2 struct {
 	Test2 int   `json:"test2,omitempty"`
 }
 
+type Test3 struct {
+	I1  int
+	I2  int8
+	I3  int16
+	I4  int32
+	I5  int64
+	I6  uint
+	I7  uint8
+	I8  uint16
+	I9  uint32
+	I10 uint64
+}
+
 // TODO(patrik): This is not working
 
 // type TestStruct struct {

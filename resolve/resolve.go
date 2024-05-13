@@ -19,6 +19,7 @@ type Type interface {
 }
 
 type TypeString struct{}
+// TODO(patrik): Rename to number, or have bit size
 type TypeInt struct{}
 type TypeBoolean struct{}
 type TypeArray struct {
@@ -67,6 +68,17 @@ func New() *Resolver {
 	resolver := &Resolver{}
 
 	resolver.AddType("int", &TypeInt{})
+	resolver.AddType("int8", &TypeInt{})
+	resolver.AddType("int16", &TypeInt{})
+	resolver.AddType("int32", &TypeInt{})
+	resolver.AddType("int64", &TypeInt{})
+
+	resolver.AddType("uint", &TypeInt{})
+	resolver.AddType("uint8", &TypeInt{})
+	resolver.AddType("uint16", &TypeInt{})
+	resolver.AddType("uint32", &TypeInt{})
+	resolver.AddType("uint64", &TypeInt{})
+
 	resolver.AddType("string", &TypeString{})
 	resolver.AddType("bool", &TypeBoolean{})
 
