@@ -33,6 +33,47 @@ func parseTypespec(ty goast.Expr) ast.Typespec {
 	return nil
 }
 
+func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
+	var fields []*ast.Field
+	extend := ""
+
+	for _, field := range ty.Fields.List {
+		if field.Names == nil {
+			if extend == "" {
+				if ident, ok := field.Type.(*goast.Ident); ok {
+					extend = ident.Name
+				}
+			}
+
+			continue
+		}
+
+		var ty ast.Typespec
+
+		switch t := field.Type.(type) {
+		case *goast.Ident:
+			ty = &ast.IdentTypespec{
+				Ident: t.Name,
+			}
+		}
+
+		for _, name := range field.Names {
+
+			fields = append(fields, &ast.Field{
+				Name:  name.Name,
+				Type:  ty,
+				Unset: false,
+			})
+		}
+	}
+
+	return &ast.StructDecl{
+		Name:   name,
+		Extend: extend,
+		Fields: fields,
+	}
+}
+
 func Parse(source string) []ast.Decl {
 	fset := token.NewFileSet()
 
@@ -55,48 +96,9 @@ func Parse(source string) []ast.Decl {
 			for _, spec := range d.Specs {
 				switch spec := spec.(type) {
 				case *goast.TypeSpec:
-					pretty.Println(spec)
-
 					switch ty := spec.Type.(type) {
 					case *goast.StructType:
-						var fields []*ast.Field
-						extend := ""
-
-						for _, field := range ty.Fields.List {
-							if field.Names == nil {
-								if extend == "" {
-									if ident, ok := field.Type.(*goast.Ident); ok {
-										extend = ident.Name
-									}
-								}
-
-								continue
-							}
-
-							var ty ast.Typespec
-
-							switch t := field.Type.(type) {
-							case *goast.Ident:
-								ty = &ast.IdentTypespec{
-									Ident: t.Name,
-								}
-							}
-
-							for _, name := range field.Names {
-
-								fields = append(fields, &ast.Field{
-									Name:  name.Name,
-									Type:  ty,
-									Unset: false,
-								})
-							}
-						}
-
-						decls = append(decls, &ast.StructDecl{
-							Name:   spec.Name.Name,
-							Extend: extend,
-							Fields: fields,
-						})
+						decls = append(decls, parseStruct(spec.Name.Name, ty))
 					}
 				}
 			}
