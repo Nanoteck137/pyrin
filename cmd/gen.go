@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
 	"github.com/nanoteck137/pyrin/gen/jsgen"
 	"github.com/nanoteck137/pyrin/parser"
 	"github.com/nanoteck137/pyrin/resolve"
-	"github.com/nanoteck137/pyrin/test"
 	"github.com/spf13/cobra"
 )
 
@@ -47,13 +44,13 @@ var genTestCmd = &cobra.Command{
 
 		generator.Generate(resolver)
 
-		d, err := json.MarshalIndent(&test.TestStruct2{}, "", "  ")
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Printf("string(d): %v\n", string(d))
+		// d, err := json.MarshalIndent(&test.TestStruct2{}, "", "  ")
+		//
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		//
+		// fmt.Printf("string(d): %v\n", string(d))
 	},
 }
 
