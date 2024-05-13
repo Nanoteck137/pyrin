@@ -36,7 +36,10 @@ var genTestCmd = &cobra.Command{
 			resolver.AddSymbolDecl(decl)
 		}
 
-		resolver.ResolveAll()
+		err = resolver.ResolveAll()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		generator := jsgen.New(jsgen.Options{
 			Output: "./work/gen.ts",
