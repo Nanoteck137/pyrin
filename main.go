@@ -10,6 +10,7 @@ import (
 
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin/ast"
+	"github.com/nanoteck137/pyrin/resolve"
 )
 
 func main() {
@@ -24,10 +25,10 @@ func main() {
 		Field1 string;
 	}
 
-	type TestStruct2 struct 
+	type TestStruct2 struct { 
 		TestStruct
 
-		Field2, Hello []*string;
+		Field2, Hello int;
 	}
 	`
 
@@ -68,10 +69,20 @@ func main() {
 								continue
 							}
 
+							var ty ast.Typespec
+
+							switch t := field.Type.(type) {
+							case *goast.Ident:
+								ty = &ast.IdentTypespec{
+									Ident: t.Name,
+								}
+							}
+
 							for _, name := range field.Names {
+
 								fields = append(fields, &ast.Field{
 									Name:  name.Name,
-									Type:  nil,
+									Type:  ty,
 									Unset: false,
 								})
 							}
@@ -83,11 +94,20 @@ func main() {
 							Fields: fields,
 						})
 					}
-
 				}
 			}
 		}
 	}
 
 	pretty.Println(decls)
+
+	resolver := resolve.New()
+
+	for _, decl := range decls {
+		resolver.AddSymbolDecl(decl)
+	}
+
+	resolver.ResolveAll()
+
+	pretty.Println(resolver.Symbols)
 }
