@@ -1,11 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"go/ast"
+	goast "go/ast"
 	"go/parser"
 	"go/token"
 	"log"
+
+	"github.com/kr/pretty"
+	"github.com/nanoteck137/pyrin/ast"
 )
 
 func main() {
@@ -19,6 +21,12 @@ func main() {
 	type TestStruct struct {
 		Field1 string;
 	}
+
+	type TestStruct2 struct {
+		TestStruct
+
+		Field2, Hello []*string;
+	}
 	`
 
 	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
@@ -26,17 +34,47 @@ func main() {
 		log.Fatal(err)
 	}
 
+	var decls []ast.Decl
+
 	for _, d := range f.Decls {
 		switch d := d.(type) {
-		case *ast.GenDecl:
+		case *goast.GenDecl:
 			for _, spec := range d.Specs {
 				switch spec := spec.(type) {
-				case *ast.TypeSpec:
-					fmt.Printf("spec.Name.Name: %v\n", spec.Name.Name)
+				case *goast.TypeSpec:
+					pretty.Println(spec)
+
+					switch ty := spec.Type.(type) {
+					case *goast.StructType:
+						var fields []*ast.Field
+
+						for _, field := range ty.Fields.List {
+							if field.Names == nil {
+								continue
+							}
+
+							for _, name := range field.Names {
+								fields = append(fields, &ast.Field{
+									Name:  name.Name,
+									Type:  nil,
+									Unset: false,
+								})
+							}
+						}
+
+						decls = append(decls, &ast.StructDecl{
+							Name:   spec.Name.Name,
+							Extend: "",
+							Fields: fields,
+						})
+					}
+
 				}
 			}
 			_ = d
 		default:
 		}
 	}
+
+	pretty.Println(decls)
 }
