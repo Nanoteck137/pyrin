@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/nanoteck137/pyrin/gen/jsgen"
+	"github.com/nanoteck137/pyrin/gen/zod"
 	"github.com/nanoteck137/pyrin/parser"
 	"github.com/nanoteck137/pyrin/resolve"
 	"github.com/spf13/cobra"
@@ -41,7 +41,7 @@ var genTestCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		generator := jsgen.New(jsgen.Options{
+		generator := zod.New(zod.Options{
 			Output: "./work/gen.ts",
 		})
 
