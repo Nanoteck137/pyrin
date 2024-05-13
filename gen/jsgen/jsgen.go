@@ -50,7 +50,6 @@ func GenerateType(w io.Writer, ty resolve.Type) {
 		fmt.Fprint(w, ")")
 	case *resolve.TypePtr:
 		GenerateType(w, t.BaseType)
-		fmt.Fprint(w, ".optional()")
 		fmt.Fprint(w, ".nullable()")
 	case *resolve.TypeStruct:
 		fmt.Fprint(w, t.Name)
