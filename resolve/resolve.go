@@ -29,8 +29,8 @@ type TypePtr struct {
 }
 
 type Field struct {
-	Name string
-	Type Type
+	Name     string
+	Type     Type
 	Optional bool
 }
 
@@ -47,7 +47,7 @@ func (t *TypeString) typeType()     {}
 func (t *TypeInt) typeType()        {}
 func (t *TypeBoolean) typeType()    {}
 func (t *TypeArray) typeType()      {}
-func (t *TypePtr) typeType()      {}
+func (t *TypePtr) typeType()        {}
 func (t *TypeStruct) typeType()     {}
 func (t *TypeSameStruct) typeType() {}
 
