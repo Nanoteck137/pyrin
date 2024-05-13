@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	goast "go/ast"
 	"go/parser"
+	"go/scanner"
 	"go/token"
 	"log"
 
@@ -22,16 +24,22 @@ func main() {
 		Field1 string;
 	}
 
-	type TestStruct2 struct {
+	type TestStruct2 struct 
 		TestStruct
 
 		Field2, Hello []*string;
 	}
 	`
 
-	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	f, err := parser.ParseFile(fset, "types.go", src, parser.ParseComments)
 	if err != nil {
-		log.Fatal(err)
+		var errorList scanner.ErrorList
+		if errors.As(err, &errorList) {
+			pretty.Println(errorList)
+			log.Fatal()
+		} else {
+			log.Fatal(err)
+		}
 	}
 
 	var decls []ast.Decl
@@ -47,9 +55,16 @@ func main() {
 					switch ty := spec.Type.(type) {
 					case *goast.StructType:
 						var fields []*ast.Field
+						extend := ""
 
 						for _, field := range ty.Fields.List {
 							if field.Names == nil {
+								if extend == "" {
+									if ident, ok := field.Type.(*goast.Ident); ok {
+										extend = ident.Name
+									}
+								}
+
 								continue
 							}
 
@@ -64,15 +79,13 @@ func main() {
 
 						decls = append(decls, &ast.StructDecl{
 							Name:   spec.Name.Name,
-							Extend: "",
+							Extend: extend,
 							Fields: fields,
 						})
 					}
 
 				}
 			}
-			_ = d
-		default:
 		}
 	}
 
