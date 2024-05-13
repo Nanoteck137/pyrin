@@ -1,14 +1,14 @@
 package test
 
 type TestStruct struct {
-	Field1 string
-	Wooh string
+	Field1 []string
+	Wooh *string
 }
 
 type TestStruct2 struct {
 	TestStruct
 
-	Field2, Hello int
+	Field2, Hello []int
 }
 
 // TODO(patrik): This is not working

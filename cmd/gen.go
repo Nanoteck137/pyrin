@@ -47,10 +47,7 @@ var genTestCmd = &cobra.Command{
 
 		generator.Generate(resolver)
 
-		d, err := json.MarshalIndent(&test.TestStruct2{
-			Field2:     123,
-			Hello:      321,
-		}, "", "  ")
+		d, err := json.MarshalIndent(&test.TestStruct2{}, "", "  ")
 
 		if err != nil {
 			log.Fatal(err)

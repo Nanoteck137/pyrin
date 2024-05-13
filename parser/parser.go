@@ -48,17 +48,9 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 			continue
 		}
 
-		var ty ast.Typespec
-
-		switch t := field.Type.(type) {
-		case *goast.Ident:
-			ty = &ast.IdentTypespec{
-				Ident: t.Name,
-			}
-		}
+		ty := parseTypespec(field.Type)
 
 		for _, name := range field.Names {
-
 			fields = append(fields, &ast.Field{
 				Name:  name.Name,
 				Type:  ty,
