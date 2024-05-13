@@ -39,6 +39,7 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 
 	for _, field := range ty.Fields.List {
 		if field.Names == nil {
+			// TODO(patrik): Add error when multiple embedded structs is detected 
 			if extend == "" {
 				if ident, ok := field.Type.(*goast.Ident); ok {
 					extend = ident.Name
