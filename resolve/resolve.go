@@ -195,6 +195,7 @@ func (resolver *Resolver) Resolve(name string) (Type, error) {
 						fields = append(fields, Field{
 							Name: df.Name,
 							Type: ty,
+							Optional: df.Omit,
 						})
 					}
 				}
