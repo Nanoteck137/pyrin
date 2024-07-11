@@ -132,7 +132,13 @@ func (w *CodeWriter) GenerateCodeForEndpoint(e *Endpoint) error {
 	}
 
 	w.Writef(", \"%s\"", e.Method)
-	w.Writef(", api.%s", e.Data)
+
+	if e.Data != "" {
+		w.Writef(", api.%s", e.Data)
+	} else {
+		w.Writef(", z.undefined()")
+	}
+
 	if e.Body != "" {
 		w.Writef(", body")
 	}
@@ -172,6 +178,13 @@ var testCmd = &cobra.Command{
 					Data:     "PostAuthSignin",
 					Body:     "PostAuthSigninBody",
 				},
+				{
+					Name:     "addItemsToPlaylist",
+					Method:   http.MethodPost,
+					Endpoint: "/api/v1/playlists/:playlistId/items",
+					Data:     "",
+					Body:     "PostPlaylistItemsByIdBody",
+				},
 			},
 		}
 
@@ -182,13 +195,16 @@ var testCmd = &cobra.Command{
 			writer: buf,
 		}
 
+
 		// export class ApiClient extends BaseApiClient {
 		//   constructor(baseUrl: string) {
 		//     super(baseUrl);
 		//   }
 		// }
 
+		w.IWritef("import { z } from \"zod\";\n")
 		w.IWritef("import * as api from \"./types\";\n")
+		w.IWritef("import BaseApiClient from \"./base-client\";\n")
 		w.IWritef("\n")
 
 		w.IWritef("export class ApiClient extends BaseApiClient {\n")
