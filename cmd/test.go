@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin/ast"
 	"github.com/nanoteck137/pyrin/client"
 	"github.com/nanoteck137/pyrin/gen/zod"
