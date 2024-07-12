@@ -3,230 +3,123 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io"
+	goparser "go/parser"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/iancoleman/strcase"
 	"github.com/kr/pretty"
+	"github.com/nanoteck137/pyrin/ast"
+	"github.com/nanoteck137/pyrin/client"
+	"github.com/nanoteck137/pyrin/gen/zod"
+	"github.com/nanoteck137/pyrin/parser"
+	"github.com/nanoteck137/pyrin/resolve"
 	"github.com/spf13/cobra"
 )
-
-type Endpoint struct {
-	Name     string
-	Method   string
-	Endpoint string
-	Data     string
-	Body     string
-}
-
-type ServerSetup struct {
-	Endpoints []Endpoint
-}
-
-type CodeWriter struct {
-	writer io.Writer
-	indent int
-}
-
-func (w *CodeWriter) Indent() {
-	w.indent += 1
-}
-
-func (w *CodeWriter) Unindent() {
-	if w.indent == 0 {
-		return
-	}
-
-	w.indent -= 1
-}
-
-func (w *CodeWriter) WriteIndent() error {
-	for i := 0; i < w.indent; i++ {
-		_, err := w.writer.Write(([]byte)("  "))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (w *CodeWriter) Writef(format string, a ...any) error {
-	_, err := fmt.Fprintf(w.writer, format, a...)
-	return err
-}
-
-func (w *CodeWriter) IWritef(format string, a ...any) error {
-	err := w.WriteIndent()
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(w.writer, format, a...)
-
-	return err
-}
-
-func (w *CodeWriter) GenerateCodeForEndpoint(e *Endpoint) error {
-	// getPlaylists() {
-	//   return this.request("/api/v1/playlists", "GET", api.GetPlaylists);
-	// }
-
-	// return this.request("/api/v1/playlists", "POST", api.PostPlaylist, body);
-
-	var args []string
-
-	parts := strings.Split(e.Endpoint, "/")
-	pretty.Println(parts)
-
-	endpointHasArgs := false
-
-	for i, p := range parts {
-		if len(p) == 0 {
-			continue
-		}
-
-		if p[0] == ':' {
-			name := p[1:]
-			args = append(args, name)
-
-			parts[i] = fmt.Sprintf("${%s}", name)
-
-			endpointHasArgs = true
-		}
-	}
-
-	pretty.Println(parts)
-
-	newEndpoint := strings.Join(parts, "/")
-
-	w.IWritef("%s(", strcase.ToLowerCamel(e.Name))
-
-	for i, arg := range args {
-		if i == 0 {
-			w.Writef("%s: string", arg)
-		} else {
-			w.Writef(", %s: string", arg)
-		}
-	}
-
-	if e.Body != "" {
-		if len(args) > 0 {
-			w.Writef(", ")
-		}
-
-		w.Writef("body: api.%s", e.Body)
-	}
-
-	w.Writef(") {\n")
-
-	w.Indent()
-	w.IWritef("return this.request(")
-
-	if endpointHasArgs {
-		w.Writef("`%s`", newEndpoint)
-	} else {
-		w.Writef("\"%s\"", newEndpoint)
-	}
-
-	w.Writef(", \"%s\"", e.Method)
-
-	if e.Data != "" {
-		w.Writef(", api.%s", e.Data)
-	} else {
-		w.Writef(", z.undefined()")
-	}
-
-	if e.Body != "" {
-		w.Writef(", body")
-	}
-
-	w.Writef(")\n")
-	// \"%s\", \"%s\", api.%s)\n", newEndpoint, e.Method, e.Data)
-	w.Unindent()
-
-	w.IWritef("}\n")
-
-	return nil
-}
 
 var testCmd = &cobra.Command{
 	Use: "test",
 	Run: func(cmd *cobra.Command, args []string) {
-		server := ServerSetup{
-			Endpoints: []Endpoint{
+		server := client.Server{
+			Types: []client.MetadataType{
 				{
-					Name:     "GetTracks",
-					Method:   http.MethodGet,
-					Endpoint: "/api/v1/tracks",
-					Data:     "GetTracks",
-					Body:     "",
+					Name:   "Track",
+					Extend: "",
+					Fields: []client.TypeField{
+						{
+							Name: "name",
+							Type: "string",
+							Omit: false,
+						},
+						{
+							Name: "num",
+							Type: "int",
+							Omit: false,
+						},
+					},
 				},
 				{
-					Name:     "GetTrackById",
-					Method:   http.MethodGet,
-					Endpoint: "/api/v1/tracks/:id",
-					Data:     "GetTrackById",
-					Body:     "",
+					Name:   "GetTracks",
+					Extend: "",
+					Fields: []client.TypeField{
+						{
+							Name: "tracks",
+							Type: "[]Track",
+							Omit: false,
+						},
+					},
 				},
 				{
-					Name:     "Signin",
-					Method:   http.MethodPost,
-					Endpoint: "/api/v1/auth/signin",
-					Data:     "PostAuthSignin",
-					Body:     "PostAuthSigninBody",
+					Name:   "GetTrackById",
+					Extend: "Track",
+					Fields: []client.TypeField{
+						{
+							Name: "num",
+							Type: "string",
+							Omit: false,
+						},
+					},
+				},
+			},
+			Endpoints: []client.Endpoint{
+				{
+					Name:         "GetTracks",
+					Method:       http.MethodGet,
+					Path:         "/api/v1/tracks",
+					ResponseType: "GetTracks",
+					BodyType:     "",
 				},
 				{
-					Name:     "addItemsToPlaylist",
-					Method:   http.MethodPost,
-					Endpoint: "/api/v1/playlists/:playlistId/items",
-					Data:     "",
-					Body:     "PostPlaylistItemsByIdBody",
+					Name:         "GetTrackById",
+					Method:       http.MethodGet,
+					Path:         "/api/v1/tracks/:id",
+					ResponseType: "GetTrackById",
+					BodyType:     "",
 				},
 			},
 		}
 
-		pretty.Println(server)
+		resolver := resolve.New()
+
+		for _, t := range server.Types {
+			fields := make([]*ast.Field, 0, len(t.Fields))
+
+			for _, f := range t.Fields {
+				e, err := goparser.ParseExpr(f.Type)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				t := parser.ParseTypespec(e)
+
+				fields = append(fields, &ast.Field{
+					Name: f.Name,
+					Type: t,
+					Omit: f.Omit,
+				})
+			}
+
+			resolver.AddSymbolDecl(&ast.StructDecl{
+				Name:   t.Name,
+				Extend: t.Extend,
+				Fields: fields,
+			})
+		}
+
+		err := resolver.ResolveAll()
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		buf := &bytes.Buffer{}
-		w := CodeWriter{
-			writer: buf,
+		err = zod.GenerateTypeCode(buf, resolver)
+		if err != nil {
+			log.Fatal(err)
 		}
 
+		fmt.Printf("%v\n", buf.String())
 
-		// export class ApiClient extends BaseApiClient {
-		//   constructor(baseUrl: string) {
-		//     super(baseUrl);
-		//   }
-		// }
-
-		w.IWritef("import { z } from \"zod\";\n")
-		w.IWritef("import * as api from \"./types\";\n")
-		w.IWritef("import BaseApiClient from \"./base-client\";\n")
-		w.IWritef("\n")
-
-		w.IWritef("export class ApiClient extends BaseApiClient {\n")
-		w.Indent()
-
-		w.IWritef("constructor(baseUrl: string) {\n")
-		w.Indent()
-		w.IWritef("super(baseUrl);\n")
-		w.Unindent()
-		w.IWritef("}\n")
-
-		for _, endpoint := range server.Endpoints {
-			w.IWritef("\n")
-
-			err := w.GenerateCodeForEndpoint(&endpoint)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		w.Unindent()
-		w.IWritef("}\n")
+		buf = &bytes.Buffer{}
+		zod.GenerateClientCode(buf, &server)
 
 		fmt.Printf("%v\n", buf.String())
 	},
