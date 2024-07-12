@@ -1,17 +1,13 @@
 package cmd
 
 import (
-	"bytes"
-	"fmt"
-	goparser "go/parser"
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"path"
 
-	"github.com/nanoteck137/pyrin/ast"
 	"github.com/nanoteck137/pyrin/client"
-	"github.com/nanoteck137/pyrin/gen/zod"
-	"github.com/nanoteck137/pyrin/parser"
-	"github.com/nanoteck137/pyrin/resolve"
 	"github.com/spf13/cobra"
 )
 
@@ -77,50 +73,22 @@ var testCmd = &cobra.Command{
 			},
 		}
 
-		resolver := resolve.New()
-
-		for _, t := range server.Types {
-			fields := make([]*ast.Field, 0, len(t.Fields))
-
-			for _, f := range t.Fields {
-				e, err := goparser.ParseExpr(f.Type)
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				t := parser.ParseTypespec(e)
-
-				fields = append(fields, &ast.Field{
-					Name: f.Name,
-					Type: t,
-					Omit: f.Omit,
-				})
-			}
-
-			resolver.AddSymbolDecl(&ast.StructDecl{
-				Name:   t.Name,
-				Extend: t.Extend,
-				Fields: fields,
-			})
-		}
-
-		err := resolver.ResolveAll()
+		d, err := json.MarshalIndent(server, "", "  ")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		buf := &bytes.Buffer{}
-		err = zod.GenerateTypeCode(buf, resolver)
+		out := "work"
+		err = os.MkdirAll(out, 0755)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		fmt.Printf("%v\n", buf.String())
-
-		buf = &bytes.Buffer{}
-		zod.GenerateClientCode(buf, &server)
-
-		fmt.Printf("%v\n", buf.String())
+		p := path.Join(out, "test.json")
+		err = os.WriteFile(p, d, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
 
