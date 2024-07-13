@@ -39,6 +39,7 @@ var genZodCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		// TODO(patrik): Add checks
 		var server client.Server
 		err = json.Unmarshal(d, &server)
 		if err != nil {
