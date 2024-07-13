@@ -12,7 +12,7 @@ import (
 	"github.com/nanoteck137/pyrin/ast"
 	"github.com/nanoteck137/pyrin/base"
 	"github.com/nanoteck137/pyrin/client"
-	"github.com/nanoteck137/pyrin/gen/zod"
+	"github.com/nanoteck137/pyrin/gen/tsg"
 	"github.com/nanoteck137/pyrin/parser"
 	"github.com/nanoteck137/pyrin/resolve"
 	"github.com/spf13/cobra"
@@ -22,8 +22,8 @@ var genCmd = &cobra.Command{
 	Use: "gen",
 }
 
-var genZodCmd = &cobra.Command{
-	Use:  "zod <SERVER_CONFIG>",
+var genTsCmd = &cobra.Command{
+	Use:  "ts <SERVER_CONFIG>",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		input := args[0]
@@ -79,7 +79,7 @@ var genZodCmd = &cobra.Command{
 		}
 
 		buf := &bytes.Buffer{}
-		err = zod.GenerateTypeCode(buf, resolver)
+		err = tsg.GenerateTypeCode(buf, resolver)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -93,7 +93,7 @@ var genZodCmd = &cobra.Command{
 		}
 
 		buf = &bytes.Buffer{}
-		zod.GenerateClientCode(buf, &server)
+		tsg.GenerateClientCode(buf, &server)
 
 		fmt.Printf("%v\n", buf.String())
 
@@ -112,8 +112,8 @@ var genZodCmd = &cobra.Command{
 }
 
 func init() {
-	genZodCmd.Flags().StringP("output", "o", "./src/api", "Output directory")
-	genCmd.AddCommand(genZodCmd)
+	genTsCmd.Flags().StringP("output", "o", "./src/api", "Output directory")
+	genCmd.AddCommand(genTsCmd)
 
 	rootCmd.AddCommand(genCmd)
 }

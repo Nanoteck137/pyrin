@@ -1,4 +1,4 @@
-package zod
+package tsg
 
 import (
 	"fmt"
