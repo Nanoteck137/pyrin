@@ -14,19 +14,19 @@ import (
 	"github.com/nanoteck137/pyrin/ast"
 )
 
-func parseTypespec(ty goast.Expr) ast.Typespec {
+func ParseTypespec(ty goast.Expr) ast.Typespec {
 	switch ty := ty.(type) {
 	case *goast.Ident:
 		return &ast.IdentTypespec{
 			Ident: ty.Name,
 		}
 	case *goast.StarExpr:
-		base := parseTypespec(ty.X)
+		base := ParseTypespec(ty.X)
 		return &ast.PtrTypespec{
 			Base: base,
 		}
 	case *goast.ArrayType:
-		element := parseTypespec(ty.Elt)
+		element := ParseTypespec(ty.Elt)
 		return &ast.ArrayTypespec{
 			Element: element,
 		}
@@ -74,7 +74,7 @@ func parseStruct(name string, ty *goast.StructType) *ast.StructDecl {
 			}
 		}
 
-		ty := parseTypespec(field.Type)
+		ty := ParseTypespec(field.Type)
 
 		// TODO(patrik): Better errors
 		if len(field.Names) > 1 {
