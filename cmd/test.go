@@ -15,7 +15,7 @@ var testCmd = &cobra.Command{
 	Use: "test",
 	Run: func(cmd *cobra.Command, args []string) {
 		server := client.Server{
-			Types: []client.MetadataType{
+			Types: []client.Type{
 				{
 					Name:   "Track",
 					Extend: "",
