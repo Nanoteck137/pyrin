@@ -14,13 +14,13 @@ type TypeField struct {
 	Omit bool   `json:"omit"`
 }
 
-type MetadataType struct {
-	Name   string              `json:"name"`
-	Extend string              `json:"extend"`
+type Type struct {
+	Name   string      `json:"name"`
+	Extend string      `json:"extend"`
 	Fields []TypeField `json:"fields"`
 }
 
 type Server struct {
-	Types     []MetadataType     `json:"types"`
+	Types     []Type     `json:"types"`
 	Endpoints []Endpoint `json:"endpoints"`
 }
