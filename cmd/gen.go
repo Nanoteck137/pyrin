@@ -18,12 +18,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var genCmd = &cobra.Command{
-	Use: "gen",
-}
-
 var genTsCmd = &cobra.Command{
 	Use:  "ts <SERVER_CONFIG>",
+	Short: "Generate Typescript code",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		input := args[0]
@@ -113,7 +110,5 @@ var genTsCmd = &cobra.Command{
 
 func init() {
 	genTsCmd.Flags().StringP("output", "o", "./src/api", "Output directory")
-	genCmd.AddCommand(genTsCmd)
-
-	rootCmd.AddCommand(genCmd)
+	rootCmd.AddCommand(genTsCmd)
 }
