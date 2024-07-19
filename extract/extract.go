@@ -26,16 +26,6 @@ func NewContext() *Context {
 	}
 }
 
-func printIndent(indent int) {
-	if indent == 0 {
-		return
-	}
-
-	for i := 0; i < indent; i++ {
-		fmt.Print("  ")
-	}
-}
-
 func (c *Context) isTypeRegisterd(t reflect.Type) bool {
 	fullName := t.PkgPath() + "-" + t.Name()
 	_, exists := c.names[fullName]
@@ -73,24 +63,21 @@ func (c *Context) translateName(name, pkg string) (string, error) {
 	return n, nil
 }
 
-func (c *Context) checkType(t reflect.Type, indent int) error {
+func (c *Context) checkType(t reflect.Type) error {
 	switch t.Kind() {
 	case reflect.Struct:
-		return c.CheckStruct(t, indent+1)
+		return c.checkStruct(t)
 	case reflect.Array, reflect.Chan, reflect.Map, reflect.Pointer, reflect.Slice:
-		return c.checkType(t.Elem(), indent)
+		return c.checkType(t.Elem())
 	}
 
 	return nil
 }
 
-func (c *Context) CheckStruct(t reflect.Type, indent int) error {
+func (c *Context) checkStruct(t reflect.Type) error {
 	if t.Kind() != reflect.Struct {
 		return errors.New("Type needs to be struct")
 	}
-
-	printIndent(indent)
-	fmt.Println("Name: ", t.Name())
 
 	if c.isTypeRegisterd(t) {
 		return nil
@@ -105,7 +92,7 @@ func (c *Context) CheckStruct(t reflect.Type, indent int) error {
 			continue
 		}
 
-		err := c.checkType(sf.Type, indent)
+		err := c.checkType(sf.Type)
 		if err != nil {
 			return err
 		}
@@ -114,9 +101,9 @@ func (c *Context) CheckStruct(t reflect.Type, indent int) error {
 	return nil
 }
 
-func (c *Context) AddType(value any) error {
+func (c *Context) ExtractTypes(value any) error {
 	t := reflect.TypeOf(value)
-	return c.CheckStruct(t, 0)
+	return c.checkStruct(t)
 }
 
 func (c *Context) getType(t reflect.Type) ast.Typespec {

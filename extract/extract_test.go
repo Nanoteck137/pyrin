@@ -20,7 +20,6 @@ type Inner2 struct {
 
 type TestStruct struct {
 	Inner
-	Inner2
 	A int `json:"a"`
 	B float32 `json:"b,omitempty"`
 	c string
@@ -29,12 +28,12 @@ type TestStruct struct {
 func TestExtract(t *testing.T) {
 	c := extract.NewContext()
 
-	err := c.AddType(TestStruct{})
+	err := c.ExtractTypes(TestStruct{})
 	if err != nil {
 		t.Errorf("Failed to extract type: %v", err)
 	}
 
-	err = c.AddType(testdata.Inner{})
+	err = c.ExtractTypes(testdata.Inner{})
 	if err != nil {
 		t.Errorf("Failed to extract type: %v", err)
 	}
