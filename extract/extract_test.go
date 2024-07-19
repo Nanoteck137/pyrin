@@ -14,27 +14,37 @@ type Inner struct {
 	C []float64
 }
 
-type TestStruct struct {
+type Inner2 struct {
 	A int
-	B float32
-	C string
-	D Inner
-	E *Inner
-	F []Inner
+}
+
+type TestStruct struct {
+	Inner
+	Inner2
+	A int `json:"a"`
+	B float32 `json:"b,omitempty"`
+	c string
 }
 
 func TestExtract(t *testing.T) {
 	c := extract.NewContext()
 
-	err := c.ExtractType(TestStruct{})
+	err := c.AddType(TestStruct{})
 	if err != nil {
 		t.Errorf("Failed to extract type: %v", err)
 	}
 
-	err = c.ExtractType(testdata.Inner{})
+	err = c.AddType(testdata.Inner{})
 	if err != nil {
 		t.Errorf("Failed to extract type: %v", err)
 	}
 
 	pretty.Println(c)
+
+	decls, err := c.ConvertToDecls()
+	if err != nil {
+		t.Errorf("Failed to convert to decls: %v", err)
+	}
+
+	pretty.Println(decls)
 }

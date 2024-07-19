@@ -3,18 +3,16 @@ package extract
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 	"strconv"
+	"strings"
+
+	"github.com/nanoteck137/pyrin/ast"
 )
 
-type Type struct {
-	Name     string
-	FullName string
-	Type     reflect.Type
-}
-
 type Context struct {
-	types map[string]Type
+	types map[string]reflect.Type
 
 	nameUsed map[string]int
 	names    map[string]string
@@ -22,7 +20,7 @@ type Context struct {
 
 func NewContext() *Context {
 	return &Context{
-		types:    map[string]Type{},
+		types:    map[string]reflect.Type{},
 		nameUsed: map[string]int{},
 		names:    map[string]string{},
 	}
@@ -38,23 +36,30 @@ func printIndent(indent int) {
 	}
 }
 
-func (c *Context) RegisterName(name, pkg string) string {
-	fullName := pkg + "-" + name
+func (c *Context) isTypeRegisterd(t reflect.Type) bool {
+	fullName := t.PkgPath() + "-" + t.Name()
+	_, exists := c.names[fullName]
+	return exists
+}
+
+func (c *Context) registerType(t reflect.Type) {
+	name := t.Name()
+	fullName := t.PkgPath() + "-" + name
 
 	used, exists := c.nameUsed[name]
 	if !exists {
 		c.nameUsed[name] = 1
 		c.names[fullName] = name
-
-		return name
 	} else {
 		c.nameUsed[name] = used + 1
 
 		newName := name + strconv.Itoa(used+1)
 		c.names[fullName] = newName
 
-		return newName
+		name = newName
 	}
+
+	c.types[name] = t
 }
 
 func (c *Context) translateName(name, pkg string) (string, error) {
@@ -87,21 +92,18 @@ func (c *Context) CheckStruct(t reflect.Type, indent int) error {
 	printIndent(indent)
 	fmt.Println("Name: ", t.Name())
 
-	fullName := t.PkgPath() + "-" + t.Name()
-	_, exists := c.names[fullName]
-	if exists {
+	if c.isTypeRegisterd(t) {
 		return nil
 	}
 
-	n := c.RegisterName(t.Name(), t.PkgPath())
-	c.types[n] = Type{
-		Name:     t.Name(),
-		FullName: t.PkgPath() + "-" + t.Name(),
-		Type:     t,
-	}
+	c.registerType(t)
 
 	for i := 0; i < t.NumField(); i++ {
 		sf := t.Field(i)
+
+		if !sf.IsExported() {
+			continue
+		}
 
 		err := c.checkType(sf.Type, indent)
 		if err != nil {
@@ -112,7 +114,113 @@ func (c *Context) CheckStruct(t reflect.Type, indent int) error {
 	return nil
 }
 
-func (c *Context) ExtractType(value any) error {
+func (c *Context) AddType(value any) error {
 	t := reflect.TypeOf(value)
 	return c.CheckStruct(t, 0)
+}
+
+func (c *Context) getType(t reflect.Type) ast.Typespec {
+	switch t.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return &ast.IdentTypespec{Ident: "int"}
+	case reflect.Bool:
+		return &ast.IdentTypespec{Ident: "int"}
+	case reflect.String:
+		return &ast.IdentTypespec{Ident: "string"}
+	case reflect.Float32, reflect.Float64:
+		// TODO(patrik): Wrong type
+		return &ast.IdentTypespec{Ident: "int"}
+	case reflect.Struct:
+		name, err := c.translateName(t.Name(), t.PkgPath())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return &ast.IdentTypespec{Ident: name}
+	case reflect.Slice:
+		el := c.getType(t.Elem())
+		return &ast.ArrayTypespec{
+			Element: el,
+		}
+	case reflect.Pointer:
+		base := c.getType(t.Elem())
+		return &ast.PtrTypespec{
+			Base: base,
+		}
+
+	default:
+		log.Fatal("Unknown type ", t.Name(), " ", t.Kind())
+	}
+
+	return nil
+}
+
+func (c *Context) ConvertToDecls() ([]ast.Decl, error) {
+	var decls []ast.Decl
+
+	for k, t := range c.types {
+		extend := ""
+
+		var fields []*ast.Field
+
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+
+			if !f.IsExported() {
+				continue
+			}
+
+			if f.Anonymous {
+				if extend != "" {
+					return nil, errors.New("Multiple embedded structs")
+				}
+
+				n, err := c.translateName(f.Type.Name(), f.Type.PkgPath())
+				if err != nil {
+					return nil, err
+				}
+
+				extend = n
+
+				continue
+			}
+
+			j := f.Tag.Get("json")
+
+			parts := strings.Split(j, ",")
+
+			jname := parts[0]
+			joptions := parts[1:]
+
+			hasOmit := false
+
+			for _, v := range joptions {
+				if v == "omitempty" {
+					hasOmit = true
+					break
+				}
+			}
+
+			ts := c.getType(f.Type)
+
+			name := f.Name
+			if jname != "" {
+				name = jname
+			}
+
+			fields = append(fields, &ast.Field{
+				Name: name,
+				Type: ts,
+				Omit: hasOmit,
+			})
+		}
+
+		decls = append(decls, &ast.StructDecl{
+			Name:   k,
+			Extend: extend,
+			Fields: fields,
+		})
+	}
+
+	return decls, nil
 }
