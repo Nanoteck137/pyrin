@@ -52,7 +52,7 @@ func (c *Context) registerType(t reflect.Type) {
 	c.types[name] = t
 }
 
-func (c *Context) translateName(name, pkg string) (string, error) {
+func (c *Context) TranslateName(name, pkg string) (string, error) {
 	fullName := pkg + "-" + name
 
 	n, exists := c.names[fullName]
@@ -118,7 +118,7 @@ func (c *Context) getType(t reflect.Type) ast.Typespec {
 		// TODO(patrik): Wrong type
 		return &ast.IdentTypespec{Ident: "int"}
 	case reflect.Struct:
-		name, err := c.translateName(t.Name(), t.PkgPath())
+		name, err := c.TranslateName(t.Name(), t.PkgPath())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -162,7 +162,7 @@ func (c *Context) ConvertToDecls() ([]ast.Decl, error) {
 					return nil, errors.New("Multiple embedded structs")
 				}
 
-				n, err := c.translateName(f.Type.Name(), f.Type.PkgPath())
+				n, err := c.TranslateName(f.Type.Name(), f.Type.PkgPath())
 				if err != nil {
 					return nil, err
 				}
