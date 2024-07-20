@@ -69,26 +69,6 @@ func GenerateField(w io.Writer, field *resolve.Field) {
 	}
 }
 
-
-// TODO(patrik): Example
-/*
-func (c *Client) GetPlaylistById(id string, options Options) (*GetPlaylistById, error) {
-	path := fmt.Sprintf("/api/v1/playlists/%v", id)
-	url, err := createUrl(c.addr, path, options.QueryParams)
-	if err != nil {
-		return nil, err
-	}
-
-	data := RequestData{
-		Url: url,
-		Method: http.MethodGet,
-		Token: c.token,
-		Body: nil,
-	}
-	return Request[GetPlaylistById](data)
-}
-*/
-
 func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	resType := e.ResponseType
 
