@@ -123,6 +123,10 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 		fmt.Fprintf(&b, "%s string, ", v)
 	}
 
+	if e.BodyType != "" {
+		fmt.Fprintf(&b, "body %s, ", e.BodyType)
+	}
+
 	fmt.Fprintf(&b, "options Options")
 
 	w.IWritef("func (c *Client) %v(%s) (*%s, error) {\n", e.Name, b.String(), resType)
