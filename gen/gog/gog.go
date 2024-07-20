@@ -137,7 +137,13 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	w.IWritef("Url: url,\n")
 	w.IWritef("Method: \"%v\",\n", e.Method)
 	w.IWritef("Token: c.token,\n")
-	w.IWritef("Body: nil,\n")
+
+	body := "nil"
+	if e.BodyType != "" {
+		body = "body"
+	}
+
+	w.IWritef("Body: %s,\n", body)
 
 	w.Unindent()
 	w.IWritef("}\n")

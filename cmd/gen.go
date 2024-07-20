@@ -172,8 +172,6 @@ var genGoCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		fmt.Printf("%v\n", buf.String())
-
 		p := path.Join(output, "types.go")
 		err = os.WriteFile(p, buf.Bytes(), 0644)
 		if err != nil {
@@ -182,8 +180,6 @@ var genGoCmd = &cobra.Command{
 
 		buf = &bytes.Buffer{}
 		gog.GenerateClientCode(buf, &server)
-
-		fmt.Printf("%v\n", buf.String())
 
 		p = path.Join(output, "client.go")
 		err = os.WriteFile(p, buf.Bytes(), 0644)
