@@ -145,7 +145,8 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 
 func GenerateClientCode(w io.Writer, server *client.Server) error {
 	cw := util.CodeWriter{
-		Writer: w,
+		Writer:    w,
+		IndentStr: "  ",
 	}
 
 	cw.IWritef("import { z } from \"zod\";\n")

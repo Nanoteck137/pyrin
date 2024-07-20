@@ -37,8 +37,9 @@ func TypeToString(ty resolve.Type) (string, error) {
 }
 
 type CodeWriter struct {
-	Writer io.Writer
-	indent int
+	Writer    io.Writer
+	IndentStr string
+	indent    int
 }
 
 func (w *CodeWriter) Indent() {
@@ -55,7 +56,7 @@ func (w *CodeWriter) Unindent() {
 
 func (w *CodeWriter) WriteIndent() error {
 	for i := 0; i < w.indent; i++ {
-		_, err := w.Writer.Write(([]byte)("  "))
+		_, err := w.Writer.Write(([]byte)(w.IndentStr))
 		if err != nil {
 			return err
 		}
