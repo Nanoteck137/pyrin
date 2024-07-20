@@ -111,9 +111,10 @@ func (c *Context) getType(t reflect.Type) ast.Typespec {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return &ast.IdentTypespec{Ident: "int"}
 	case reflect.Bool:
-		return &ast.IdentTypespec{Ident: "int"}
+		return &ast.IdentTypespec{Ident: "bool"}
 	case reflect.String:
 		return &ast.IdentTypespec{Ident: "string"}
+	// TODO(patrik): Create float types
 	case reflect.Float32, reflect.Float64:
 		// TODO(patrik): Wrong type
 		return &ast.IdentTypespec{Ident: "int"}
