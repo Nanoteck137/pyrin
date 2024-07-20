@@ -8,6 +8,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/nanoteck137/pyrin/client"
 	"github.com/nanoteck137/pyrin/resolve"
+	"github.com/nanoteck137/pyrin/util"
 )
 
 func GenerateType(w io.Writer, ty resolve.Type) {
@@ -64,51 +65,7 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 	return nil
 }
 
-type CodeWriter struct {
-	writer io.Writer
-	indent int
-}
-
-func (w *CodeWriter) Indent() {
-	w.indent += 1
-}
-
-func (w *CodeWriter) Unindent() {
-	if w.indent == 0 {
-		return
-	}
-
-	w.indent -= 1
-}
-
-func (w *CodeWriter) WriteIndent() error {
-	for i := 0; i < w.indent; i++ {
-		_, err := w.writer.Write(([]byte)("  "))
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (w *CodeWriter) Writef(format string, a ...any) error {
-	_, err := fmt.Fprintf(w.writer, format, a...)
-	return err
-}
-
-func (w *CodeWriter) IWritef(format string, a ...any) error {
-	err := w.WriteIndent()
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(w.writer, format, a...)
-
-	return err
-}
-
-func generateCodeForEndpoint(w *CodeWriter, e *client.Endpoint) error {
+func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	// getPlaylists() {
 	//   return this.request("/api/v1/playlists", "GET", api.GetPlaylists);
 	// }
@@ -187,8 +144,8 @@ func generateCodeForEndpoint(w *CodeWriter, e *client.Endpoint) error {
 }
 
 func GenerateClientCode(w io.Writer, server *client.Server) error {
-	cw := CodeWriter{
-		writer: w,
+	cw := util.CodeWriter{
+		Writer: w,
 	}
 
 	cw.IWritef("import { z } from \"zod\";\n")
