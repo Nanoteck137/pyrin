@@ -37,6 +37,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             go
+            gopls
           ];
         };
       }
