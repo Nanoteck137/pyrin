@@ -16,7 +16,12 @@ function createApiResponse<
   ]);
 }
 
-export default class BaseApiClient {
+export type ExtraOptions = {
+  headers?: Record<string, string>;
+  query?: Record<string, string>;
+};
+
+export class BaseApiClient {
   baseUrl: string;
   token?: string;
 
@@ -33,6 +38,7 @@ export default class BaseApiClient {
     method: string,
     bodySchema: T,
     body?: any,
+    extra?: ExtraOptions,
   ) {
     const headers: Record<string, string> = {};
     if (this.token) {
@@ -43,7 +49,23 @@ export default class BaseApiClient {
       headers["Content-Type"] = "application/json";
     }
 
-    const res = await fetch(this.baseUrl + endpoint, {
+    const url = new URL(this.baseUrl + endpoint);
+
+    if (extra) {
+      if (extra.headers) {
+        for (const [key, value] of Object.entries(extra.headers)) {
+          headers[key] = value;
+        }
+      }
+
+      if (extra.query) {
+        for (const [key, value] of Object.entries(extra.query)) {
+          url.searchParams.set(key, value);
+        }
+      }
+    }
+
+    const res = await fetch(url, {
       method,
       headers,
       body: body ? JSON.stringify(body) : null,

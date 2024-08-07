@@ -95,21 +95,15 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 
 	w.IWritef("%s(", strcase.ToLowerCamel(e.Name))
 
-	for i, arg := range args {
-		if i == 0 {
-			w.Writef("%s: string", arg)
-		} else {
-			w.Writef(", %s: string", arg)
-		}
+	for _, arg := range args {
+		w.Writef("%s: string, ", arg)
 	}
 
 	if e.BodyType != "" {
-		if len(args) > 0 {
-			w.Writef(", ")
-		}
-
-		w.Writef("body: api.%s", e.BodyType)
+		w.Writef("body: api.%s, ", e.BodyType)
 	}
+
+	w.Writef("options?: ExtraOptions")
 
 	w.Writef(") {\n")
 
@@ -132,7 +126,11 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 
 	if e.BodyType != "" {
 		w.Writef(", body")
+	} else {
+		w.Writef(", undefined")
 	}
+
+	w.Writef(", options")
 
 	w.Writef(")\n")
 	// \"%s\", \"%s\", api.%s)\n", newEndpoint, e.Method, e.Data)
@@ -151,7 +149,7 @@ func GenerateClientCode(w io.Writer, server *client.Server) error {
 
 	cw.IWritef("import { z } from \"zod\";\n")
 	cw.IWritef("import * as api from \"./types\";\n")
-	cw.IWritef("import BaseApiClient from \"./base-client\";\n")
+	cw.IWritef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
 	cw.IWritef("\n")
 
 	cw.IWritef("export class ApiClient extends BaseApiClient {\n")
