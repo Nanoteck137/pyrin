@@ -118,7 +118,11 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	w.Indent()
 
 	w.IWritef("z.enum([") 
-	for _, t := range e.ErrorTypes {
+	for i, t := range e.ErrorTypes {
+		if i > 0 {
+			w.Writef(", ")
+		}
+
 		w.Writef("\"%s\"", t)
 	}
 	w.Writef("]),\n")
