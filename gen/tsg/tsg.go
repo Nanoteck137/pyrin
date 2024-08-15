@@ -126,7 +126,7 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 		w.Writef("\"%s\"", t)
 	}
 	w.Writef("]),\n")
-	w.IWritef("z.map(z.string(), z.string()),\n")
+	w.IWritef("z.map(z.string(), z.string()).optional(),\n")
 
 	w.Unindent()
 	w.IWritef(")\n")
