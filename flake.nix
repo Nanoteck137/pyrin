@@ -4,9 +4,12 @@
   inputs = {
     nixpkgs.url      = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url  = "github:numtide/flake-utils";
+
+    devtools.url     = "github:nanoteck137/devtools";
+    devtools.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, devtools, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         overlays = [];
@@ -29,6 +32,8 @@
 
           vendorHash = "sha256-YStNcVhK9l1IF1F5OWHubEzkqZempK71HAUntPXeGak=";
         };
+
+        tools = devtools.packages.${system};
       in
       {
         packages.default = pyrin;
@@ -38,6 +43,7 @@
           buildInputs = with pkgs; [
             go
             gopls
+            tools.publishVersion
           ];
         };
       }
