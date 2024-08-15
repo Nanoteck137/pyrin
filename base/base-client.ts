@@ -1,18 +1,24 @@
 import { z } from "zod";
 
-function createApiResponse<
-  Data extends z.ZodTypeAny,
-  Errors extends z.ZodTypeAny,
->(data: Data, errors: Errors) {
-  const error = z.object({
+export function createError<
+  ErrorTypes extends [string, ...string[]],
+  ErrorExtra extends z.ZodTypeAny,
+>(types: z.ZodEnum<ErrorTypes>, extra: ErrorExtra) {
+  return z.object({
     code: z.number(),
     message: z.string(),
-    errors,
+    type: types,
+    extra: extra,
   });
+}
 
-  return z.discriminatedUnion("status", [
-    z.object({ status: z.literal("success"), data }),
-    z.object({ status: z.literal("error"), error }),
+export function createApiResponse<
+  Data extends z.ZodTypeAny,
+  Error extends z.ZodTypeAny,
+>(data: Data, error: Error) {
+  return z.discriminatedUnion("success", [
+    z.object({ success: z.literal(true), data }),
+    z.object({ success: z.literal(false), error }),
   ]);
 }
 
@@ -33,10 +39,11 @@ export class BaseApiClient {
     this.token = token;
   }
 
-  async request<T extends z.ZodTypeAny>(
+  async request<B extends z.ZodTypeAny, E extends z.ZodTypeAny>(
     endpoint: string,
     method: string,
-    bodySchema: T,
+    bodySchema: B,
+    errorSchema: E,
     body?: any,
     extra?: ExtraOptions,
   ) {
@@ -71,7 +78,7 @@ export class BaseApiClient {
       body: body ? JSON.stringify(body) : null,
     });
 
-    const Schema = createApiResponse(bodySchema, z.undefined());
+    const Schema = createApiResponse(bodySchema, errorSchema);
 
     const data = await res.json();
     const parsedData = await Schema.parseAsync(data);
