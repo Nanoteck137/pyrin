@@ -147,6 +147,8 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 		w.Writef(", z.undefined()")
 	}
 
+	w.Writef(", error")
+
 	if e.BodyType != "" {
 		w.Writef(", body")
 	} else {
