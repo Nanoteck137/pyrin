@@ -108,6 +108,25 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	w.Writef(") {\n")
 
 	w.Indent()
+
+    // const error = createError(
+    //   z.enum(["ALBUM_NOT_FOUND"]),
+    //   z.map(z.string(), z.string()),
+    // );
+
+	w.IWritef("const error = createError(\n")
+	w.Indent()
+
+	w.IWritef("z.enum([") 
+	for _, t := range e.ErrorTypes {
+		w.Writef("\"%s\"", t)
+	}
+	w.Writef("]),\n")
+	w.IWritef("z.map(z.string(), z.string()),\n")
+
+	w.Unindent()
+	w.IWritef(")\n")
+
 	w.IWritef("return this.request(")
 
 	if endpointHasArgs {
@@ -149,7 +168,7 @@ func GenerateClientCode(w io.Writer, server *client.Server) error {
 
 	cw.IWritef("import { z } from \"zod\";\n")
 	cw.IWritef("import * as api from \"./types\";\n")
-	cw.IWritef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
+	cw.IWritef("import { BaseApiClient, createError, type ExtraOptions } from \"./base-client\";\n")
 	cw.IWritef("\n")
 
 	cw.IWritef("export class ApiClient extends BaseApiClient {\n")
