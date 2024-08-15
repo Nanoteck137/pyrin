@@ -14,7 +14,7 @@ func (e *Error) Error() string {
 }
 
 type Response struct {
-	Success bool   `json:"status"`
+	Success bool   `json:"success"`
 	Data    any    `json:"data,omitempty"`
 	Error   *Error `json:"error,omitempty"`
 }
