@@ -3,12 +3,13 @@ package client
 import "github.com/nanoteck137/pyrin/api"
 
 type Endpoint struct {
-	Name         string          `json:"name"`
-	Method       string          `json:"method"`
-	Path         string          `json:"path"`
-	ErrorTypes   []api.ErrorType `json:"errorTypes"`
-	ResponseType string          `json:"responseType"`
-	BodyType     string          `json:"bodyType"`
+	Name            string          `json:"name"`
+	Method          string          `json:"method"`
+	Path            string          `json:"path"`
+	ErrorTypes      []api.ErrorType `json:"errorTypes"`
+	ResponseType    string          `json:"responseType"`
+	BodyType        string          `json:"bodyType"`
+	RequireFormData bool            `json:"requireFormData"`
 }
 
 type TypeField struct {

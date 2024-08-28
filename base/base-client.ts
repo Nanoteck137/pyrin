@@ -1,24 +1,20 @@
 import { z } from "zod";
 
-export function createError<
-  ErrorTypes extends [string, ...string[]],
-  ErrorExtra extends z.ZodTypeAny,
->(types: z.ZodEnum<ErrorTypes>, extra: ErrorExtra) {
-  return z.object({
-    code: z.number(),
-    message: z.string(),
-    type: types,
-    extra: extra,
-  });
-}
-
 export function createApiResponse<
   Data extends z.ZodTypeAny,
-  Error extends z.ZodTypeAny,
->(data: Data, error: Error) {
+  ErrorExtra extends z.ZodTypeAny,
+>(data: Data, errorExtra: ErrorExtra) {
   return z.discriminatedUnion("success", [
     z.object({ success: z.literal(true), data }),
-    z.object({ success: z.literal(false), error }),
+    z.object({
+      success: z.literal(false),
+      error: z.object({
+        code: z.number(),
+        message: z.string(),
+        type: z.string().startsWith("ERR_"),
+        extra: errorExtra,
+      }),
+    }),
   ]);
 }
 
@@ -39,12 +35,19 @@ export class BaseApiClient {
     this.token = token;
   }
 
-  async request<B extends z.ZodTypeAny, E extends z.ZodTypeAny>(
+  createEndpointUrl(endpoint: string) {
+    return new URL(this.baseUrl + endpoint);
+  }
+
+  async request<
+    DataSchema extends z.ZodTypeAny,
+    ErrorExtraSchema extends z.ZodTypeAny,
+  >(
     endpoint: string,
     method: string,
-    bodySchema: B,
-    errorSchema: E,
-    body?: any,
+    dataSchema: DataSchema,
+    errorExtraSchema: ErrorExtraSchema,
+    body?: unknown,
     extra?: ExtraOptions,
   ) {
     const headers: Record<string, string> = {};
@@ -78,7 +81,53 @@ export class BaseApiClient {
       body: body ? JSON.stringify(body) : null,
     });
 
-    const Schema = createApiResponse(bodySchema, errorSchema);
+    const Schema = createApiResponse(dataSchema, errorExtraSchema);
+
+    const data = await res.json();
+    const parsedData = await Schema.parseAsync(data);
+
+    return parsedData;
+  }
+
+  async requestWithFormData<
+    DataSchema extends z.ZodTypeAny,
+    ErrorExtraSchema extends z.ZodTypeAny,
+  >(
+    endpoint: string,
+    method: string,
+    dataSchema: DataSchema,
+    errorExtraSchema: ErrorExtraSchema,
+    body: FormData,
+    extra?: ExtraOptions,
+  ) {
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
+    const url = new URL(this.baseUrl + endpoint);
+
+    if (extra) {
+      if (extra.headers) {
+        for (const [key, value] of Object.entries(extra.headers)) {
+          headers[key] = value;
+        }
+      }
+
+      if (extra.query) {
+        for (const [key, value] of Object.entries(extra.query)) {
+          url.searchParams.set(key, value);
+        }
+      }
+    }
+
+    const res = await fetch(url, {
+      method,
+      headers,
+      body,
+    });
+
+    const Schema = createApiResponse(dataSchema, errorExtraSchema);
 
     const data = await res.json();
     const parsedData = await Schema.parseAsync(data);

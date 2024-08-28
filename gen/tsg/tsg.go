@@ -65,13 +65,7 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 	return nil
 }
 
-func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
-	// getPlaylists() {
-	//   return this.request("/api/v1/playlists", "GET", api.GetPlaylists);
-	// }
-
-	// return this.request("/api/v1/playlists", "POST", api.PostPlaylist, body);
-
+func genNormalEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -109,28 +103,6 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 
 	w.Indent()
 
-    // const error = createError(
-    //   z.enum(["ALBUM_NOT_FOUND"]),
-    //   z.map(z.string(), z.string()),
-    // );
-
-	w.IWritef("const error = createError(\n")
-	w.Indent()
-
-	w.IWritef("z.enum([") 
-	for i, t := range e.ErrorTypes {
-		if i > 0 {
-			w.Writef(", ")
-		}
-
-		w.Writef("\"%s\"", t)
-	}
-	w.Writef("]),\n")
-	w.IWritef("z.map(z.string(), z.string()).optional(),\n")
-
-	w.Unindent()
-	w.IWritef(")\n")
-
 	w.IWritef("return this.request(")
 
 	if endpointHasArgs {
@@ -147,7 +119,7 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 		w.Writef(", z.undefined()")
 	}
 
-	w.Writef(", error")
+	w.Writef(", z.undefined()")
 
 	if e.BodyType != "" {
 		w.Writef(", body")
@@ -158,7 +130,71 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	w.Writef(", options")
 
 	w.Writef(")\n")
-	// \"%s\", \"%s\", api.%s)\n", newEndpoint, e.Method, e.Data)
+	w.Unindent()
+
+	w.IWritef("}\n")
+
+	return nil
+}
+
+func genFormDataEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
+	var args []string
+	parts := strings.Split(e.Path, "/")
+	endpointHasArgs := false
+
+	for i, p := range parts {
+		if len(p) == 0 {
+			continue
+		}
+
+		if p[0] == ':' {
+			name := p[1:]
+			args = append(args, name)
+
+			parts[i] = fmt.Sprintf("${%s}", name)
+
+			endpointHasArgs = true
+		}
+	}
+
+	newEndpoint := strings.Join(parts, "/")
+
+	w.IWritef("%s(", strcase.ToLowerCamel(e.Name))
+
+	for _, arg := range args {
+		w.Writef("%s: string, ", arg)
+	}
+
+	w.Writef("formData: FormData, ")
+	w.Writef("options?: ExtraOptions")
+
+	w.Writef(") {\n")
+
+	w.Indent()
+
+	w.IWritef("return this.requestWithFormData(")
+
+	if endpointHasArgs {
+		w.Writef("`%s`", newEndpoint)
+	} else {
+		w.Writef("\"%s\"", newEndpoint)
+	}
+
+	w.Writef(", \"%s\"", e.Method)
+
+	if e.ResponseType != "" {
+		w.Writef(", api.%s", e.ResponseType)
+	} else {
+		w.Writef(", z.undefined()")
+	}
+
+	w.Writef(", z.undefined()")
+
+	w.Writef(", formData")
+
+	w.Writef(", options")
+
+	w.Writef(")\n")
 	w.Unindent()
 
 	w.IWritef("}\n")
@@ -174,7 +210,14 @@ func GenerateClientCode(w io.Writer, server *client.Server) error {
 
 	cw.IWritef("import { z } from \"zod\";\n")
 	cw.IWritef("import * as api from \"./types\";\n")
-	cw.IWritef("import { BaseApiClient, createError, type ExtraOptions } from \"./base-client\";\n")
+	cw.IWritef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
+	cw.IWritef("\n")
+
+	for _, endpoint := range server.Endpoints {
+		name := strcase.ToScreamingSnake(endpoint.Name) + "_URL"
+		cw.IWritef("export const %s = \"%s\"\n", name, endpoint.Path)
+	}
+
 	cw.IWritef("\n")
 
 	cw.IWritef("export class ApiClient extends BaseApiClient {\n")
@@ -189,9 +232,16 @@ func GenerateClientCode(w io.Writer, server *client.Server) error {
 	for _, endpoint := range server.Endpoints {
 		cw.IWritef("\n")
 
-		err := generateCodeForEndpoint(&cw, &endpoint)
-		if err != nil {
-			return err
+		if endpoint.RequireFormData {
+			err := genFormDataEndpoint(&cw, &endpoint)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := genNormalEndpoint(&cw, &endpoint)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
