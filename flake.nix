@@ -24,10 +24,11 @@
           pname = "pyrin";
           version = fullVersion;
           src = ./.;
+          subPackages = ["cmd/pyrin"];
 
           ldflags = [
-            "-X github.com/nanoteck137/pyrin/cmd.Version=${version}"
-            "-X github.com/nanoteck137/pyrin/cmd.Commit=${self.dirtyRev or self.rev or "no-commit"}"
+            "-X github.com/nanoteck137/pyrin/cmd/pyrin/cli.Version=${version}"
+            "-X github.com/nanoteck137/pyrin/cmd/pyrin/cli.Commit=${self.dirtyRev or self.rev or "no-commit"}"
           ];
 
           vendorHash = "sha256-YStNcVhK9l1IF1F5OWHubEzkqZempK71HAUntPXeGak=";
