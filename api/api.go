@@ -25,3 +25,10 @@ func SuccessResponse(data any) Response {
 		Data:    data,
 	}
 }
+
+func ErrorResponse(err Error) Response {
+	return Response{
+		Success: true,
+		Error:   &err,
+	}
+}
