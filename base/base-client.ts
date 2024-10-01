@@ -11,7 +11,7 @@ export function createApiResponse<
       error: z.object({
         code: z.number(),
         message: z.string(),
-        type: z.string().startsWith("ERR_"),
+        type: z.string(),
         extra: errorExtra,
       }),
     }),
