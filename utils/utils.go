@@ -1,10 +1,10 @@
-package util
+package utils
 
 import (
 	"fmt"
 	"io"
 
-	"github.com/nanoteck137/pyrin/resolve"
+	"github.com/nanoteck137/pyrin/tools/resolve"
 )
 
 func TypeToString(ty resolve.Type) (string, error) {

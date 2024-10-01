@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/nanoteck137/pyrin/resolve"
 	"github.com/nanoteck137/pyrin/spec"
-	"github.com/nanoteck137/pyrin/util"
+	"github.com/nanoteck137/pyrin/tools/resolve"
+	"github.com/nanoteck137/pyrin/utils"
 )
 
 func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
@@ -69,7 +69,7 @@ func GenerateField(w io.Writer, field *resolve.Field) {
 	}
 }
 
-func generateCodeForEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
+func generateCodeForEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 	resType := e.ResponseType
 
 	if resType == "" {
@@ -157,7 +157,7 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
 }
 
 func GenerateClientCode(w io.Writer, server *spec.Server) error {
-	cw := util.CodeWriter{
+	cw := utils.CodeWriter{
 		Writer:    w,
 		IndentStr: "\t",
 	}

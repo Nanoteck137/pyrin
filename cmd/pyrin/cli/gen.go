@@ -9,13 +9,13 @@ import (
 	"os"
 	"path"
 
-	"github.com/nanoteck137/pyrin/ast"
-	"github.com/nanoteck137/pyrin/base"
-	"github.com/nanoteck137/pyrin/gen/gog"
-	"github.com/nanoteck137/pyrin/gen/tsg"
-	"github.com/nanoteck137/pyrin/parser"
-	"github.com/nanoteck137/pyrin/resolve"
+	"github.com/nanoteck137/pyrin/client/base"
+	"github.com/nanoteck137/pyrin/client/gen/gog"
+	"github.com/nanoteck137/pyrin/client/gen/tsg"
 	"github.com/nanoteck137/pyrin/spec"
+	"github.com/nanoteck137/pyrin/tools/ast"
+	"github.com/nanoteck137/pyrin/tools/parser"
+	"github.com/nanoteck137/pyrin/tools/resolve"
 	"github.com/spf13/cobra"
 )
 

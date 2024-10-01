@@ -11,7 +11,7 @@ import (
 
 	"github.com/fatih/structtag"
 	"github.com/kr/pretty"
-	"github.com/nanoteck137/pyrin/ast"
+	"github.com/nanoteck137/pyrin/tools/ast"
 )
 
 func ParseTypespec(ty goast.Expr) ast.Typespec {

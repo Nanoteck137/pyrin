@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/nanoteck137/pyrin/resolve"
 	"github.com/nanoteck137/pyrin/spec"
-	"github.com/nanoteck137/pyrin/util"
+	"github.com/nanoteck137/pyrin/tools/resolve"
+	"github.com/nanoteck137/pyrin/utils"
 )
 
 func GenerateType(w io.Writer, ty resolve.Type) {
@@ -65,7 +65,7 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 	return nil
 }
 
-func genNormalEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
+func genNormalEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -137,7 +137,7 @@ func genNormalEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
 	return nil
 }
 
-func genFormDataEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
+func genFormDataEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -203,7 +203,7 @@ func genFormDataEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
 }
 
 func GenerateClientCode(w io.Writer, server *spec.Server) error {
-	cw := util.CodeWriter{
+	cw := utils.CodeWriter{
 		Writer:    w,
 		IndentStr: "  ",
 	}
