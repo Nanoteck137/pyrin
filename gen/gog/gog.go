@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/nanoteck137/pyrin/client"
 	"github.com/nanoteck137/pyrin/resolve"
+	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/util"
 )
 
@@ -69,7 +69,7 @@ func GenerateField(w io.Writer, field *resolve.Field) {
 	}
 }
 
-func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
+func generateCodeForEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
 	resType := e.ResponseType
 
 	if resType == "" {
@@ -156,7 +156,7 @@ func generateCodeForEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	return nil
 }
 
-func GenerateClientCode(w io.Writer, server *client.Server) error {
+func GenerateClientCode(w io.Writer, server *spec.Server) error {
 	cw := util.CodeWriter{
 		Writer:    w,
 		IndentStr: "\t",

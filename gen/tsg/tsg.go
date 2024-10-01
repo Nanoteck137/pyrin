@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/iancoleman/strcase"
-	"github.com/nanoteck137/pyrin/client"
 	"github.com/nanoteck137/pyrin/resolve"
+	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/util"
 )
 
@@ -65,7 +65,7 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 	return nil
 }
 
-func genNormalEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
+func genNormalEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -137,7 +137,7 @@ func genNormalEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	return nil
 }
 
-func genFormDataEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
+func genFormDataEndpoint(w *util.CodeWriter, e *spec.Endpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -202,7 +202,7 @@ func genFormDataEndpoint(w *util.CodeWriter, e *client.Endpoint) error {
 	return nil
 }
 
-func GenerateClientCode(w io.Writer, server *client.Server) error {
+func GenerateClientCode(w io.Writer, server *spec.Server) error {
 	cw := util.CodeWriter{
 		Writer:    w,
 		IndentStr: "  ",

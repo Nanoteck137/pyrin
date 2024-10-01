@@ -11,16 +11,16 @@ import (
 
 	"github.com/nanoteck137/pyrin/ast"
 	"github.com/nanoteck137/pyrin/base"
-	"github.com/nanoteck137/pyrin/client"
 	"github.com/nanoteck137/pyrin/gen/gog"
 	"github.com/nanoteck137/pyrin/gen/tsg"
 	"github.com/nanoteck137/pyrin/parser"
 	"github.com/nanoteck137/pyrin/resolve"
+	"github.com/nanoteck137/pyrin/spec"
 	"github.com/spf13/cobra"
 )
 
 var genTsCmd = &cobra.Command{
-	Use:  "ts <SERVER_CONFIG>",
+	Use:  "ts <SERVER_SPEC>",
 	Short: "Generate Typescript code",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -38,7 +38,7 @@ var genTsCmd = &cobra.Command{
 		}
 
 		// TODO(patrik): Add checks
-		var server client.Server
+		var server spec.Server
 		err = json.Unmarshal(d, &server)
 		if err != nil {
 			log.Fatal(err)
@@ -110,7 +110,7 @@ var genTsCmd = &cobra.Command{
 }
 
 var genGoCmd = &cobra.Command{
-	Use:  "go <SERVER_CONFIG>",
+	Use:  "go <SERVER_SPEC>",
 	Short: "Generate Golang code",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -128,7 +128,7 @@ var genGoCmd = &cobra.Command{
 		}
 
 		// TODO(patrik): Add checks
-		var server client.Server
+		var server spec.Server
 		err = json.Unmarshal(d, &server)
 		if err != nil {
 			log.Fatal(err)
