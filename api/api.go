@@ -28,7 +28,7 @@ func SuccessResponse(data any) Response {
 
 func ErrorResponse(err Error) Response {
 	return Response{
-		Success: true,
+		Success: false,
 		Error:   &err,
 	}
 }
