@@ -22,12 +22,6 @@ func main() {
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			id := c.Param("id")
 
-			var t any = id
-
-			l := t.(int)
-
-			_ = l
-
 			if id == "123" {
 				return struct{
 					Value int `json:"value"`
