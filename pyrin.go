@@ -2,6 +2,7 @@ package pyrin
 
 import (
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/nanoteck137/pyrin/api"
 )
 
@@ -17,10 +18,10 @@ type Handler struct {
 	Path        string
 	DataType    any
 	BodyType    any
-	IsMultiForm bool
+	RequireForm bool
 	Errors      []api.ErrorType
-	HandlerFunc HandlerFunc
 	Middlewares []echo.MiddlewareFunc
+	HandlerFunc HandlerFunc
 }
 
 type Group interface {
@@ -101,6 +102,9 @@ func NewServer() *Server {
 	e := echo.New()
 	e.HTTPErrorHandler = errorHandler
 
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORS())
+
 	return &Server{
 		e: e,
 	}
@@ -121,7 +125,7 @@ type Route struct {
 	ErrorTypes  []api.ErrorType
 	Data        any
 	Body        any
-	IsMultiForm bool
+	RequireForm bool
 }
 
 type RouteGroup struct {
@@ -145,7 +149,7 @@ func (r *RouteGroup) Register(handlers ...Handler) {
 			ErrorTypes:  h.Errors,
 			Data:        h.DataType,
 			Body:        h.BodyType,
-			IsMultiForm: h.IsMultiForm,
+			RequireForm: h.RequireForm,
 		})
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/api"
 )
@@ -19,10 +18,15 @@ func main() {
 		Path:        "/test/:id",
 		DataType:    nil,
 		BodyType:    nil,
-		IsMultiForm: false,
 		Errors:      []api.ErrorType{},
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			id := c.Param("id")
+
+			var t any = id
+
+			l := t.(int)
+
+			_ = l
 
 			if id == "123" {
 				return struct{
@@ -39,7 +43,6 @@ func main() {
 				Extra:   nil,
 			}
 		},
-		Middlewares: []echo.MiddlewareFunc{},
 	})
 
 	err := server.Start(":1337")
