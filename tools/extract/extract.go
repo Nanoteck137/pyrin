@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nanoteck137/pyrin/ast"
+	"github.com/nanoteck137/pyrin/tools/ast"
 )
 
 type Context struct {

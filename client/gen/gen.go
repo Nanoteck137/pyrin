@@ -1,8 +1,6 @@
 package gen
 
-import (
-	"github.com/nanoteck137/pyrin/resolve"
-)
+import "github.com/nanoteck137/pyrin/tools/resolve"
 
 type Generator interface {
 	Name() string
