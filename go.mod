@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/fatih/structtag v1.2.0
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.12.0

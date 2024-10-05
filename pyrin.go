@@ -1,12 +1,15 @@
 package pyrin
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nanoteck137/pyrin/api"
 )
 
 type Context interface {
+	Request() *http.Request
 	Param(name string) string
 }
 
@@ -34,6 +37,10 @@ type wrapperContext struct {
 	c echo.Context
 }
 
+func (w *wrapperContext) Request() *http.Request {
+	return w.c.Request()
+}
+
 func (w *wrapperContext) Param(name string) string {
 	return w.c.Param(name)
 }
@@ -45,15 +52,13 @@ type ServerGroup struct {
 
 func (g *ServerGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
-		f := h.HandlerFunc
-
 		// log.Debug("Registering", "method", h.Method, "name", h.Name, "path", g.Prefix+h.Path)
 		wrapHandler := func(c echo.Context) error {
 			context := &wrapperContext{
 				c: c,
 			}
 
-			data, err := f(context)
+			data, err := h.HandlerFunc(context)
 			if err != nil {
 				return err
 			}
