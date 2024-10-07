@@ -1,16 +1,26 @@
 package pyrin
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/kr/pretty"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nanoteck137/pyrin/api"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
+
+type Body interface {
+	validation.Validatable
+}
 
 type Context interface {
 	Request() *http.Request
 	Param(name string) string
+	Body() any
 }
 
 type HandlerFunc func(c Context) (any, error)
@@ -20,7 +30,7 @@ type Handler struct {
 	Method      string
 	Path        string
 	DataType    any
-	BodyType    any
+	BodyType    Body
 	RequireForm bool
 	Errors      []api.ErrorType
 	Middlewares []echo.MiddlewareFunc
@@ -34,7 +44,12 @@ type Group interface {
 var _ Context = (*wrapperContext)(nil)
 
 type wrapperContext struct {
-	c echo.Context
+	c    echo.Context
+	body any
+}
+
+func (w *wrapperContext) Body() any {
+	return w.body
 }
 
 func (w *wrapperContext) Request() *http.Request {
@@ -56,6 +71,53 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 		wrapHandler := func(c echo.Context) error {
 			context := &wrapperContext{
 				c: c,
+			}
+
+			if h.BodyType != nil && !h.RequireForm {
+				b := h.BodyType
+
+				var data map[string]any
+
+				decoder := json.NewDecoder(context.Request().Body)
+				err := decoder.Decode(&data)
+				if err != nil {
+					return err
+				}
+
+				d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+					Result:  &b,
+					TagName: "json",
+				})
+				if err != nil {
+					return err
+				}
+
+				err = d.Decode(data)
+				if err != nil {
+					return err
+				}
+
+				pretty.Println(b)
+
+				err = b.Validate()
+				if err != nil {
+					extra := make(map[string]string)
+
+					if e, ok := err.(validation.Errors); ok {
+						for k, v := range e {
+							extra[k] = v.Error()
+						}
+					}
+
+					return &api.Error{
+						Code:    400,
+						Type:    "VALIDATION_ERROR",
+						Message: "Body Validation error",
+						Extra:   extra,
+					}
+				}
+
+				context.body = b
 			}
 
 			data, err := h.HandlerFunc(context)
@@ -96,9 +158,10 @@ func errorHandler(err error, c echo.Context) {
 		}))
 	default:
 		c.JSON(500, api.ErrorResponse(api.Error{
-			Code:    500,
-			Type:    ErrTypeUnknownError,
-			Message: "Internal Server Error",
+			Code: 500,
+			Type: ErrTypeUnknownError,
+			// Message: "Internal Server Error",
+			Message: err.Error(),
 		}))
 	}
 }

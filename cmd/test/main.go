@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -38,37 +37,6 @@ func (b TestBody) Validate() error {
 	)
 }
 
-func Body[T validation.Validatable](c pyrin.Context) (T, error) {
-	var res T
-
-	decoder := json.NewDecoder(c.Request().Body)
-
-	err := decoder.Decode(&res)
-	if err != nil {
-		return res, err
-	}
-
-	err = res.Validate()
-	if err != nil {
-		extra := make(map[string]string)
-
-		if e, ok := err.(validation.Errors); ok {
-			for k, v := range e {
-				extra[k] = v.Error()
-			}
-		}
-
-		return res, &api.Error{
-			Code:    400,
-			Type:    "VALIDATION_ERROR",
-			Message: "Body Validation error",
-			Extra:   extra,
-		}
-	}
-
-	return res, nil
-}
-
 func main() {
 	server := pyrin.NewServer()
 
@@ -83,12 +51,7 @@ func main() {
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			id := c.Param("id")
 
-			body, err := Body[TestBody](c)
-			if err != nil {
-				fmt.Printf("err: %v\n", err)
-				return nil, err
-			}
-
+			body := c.Body().(TestBody)
 			pretty.Println(body)
 
 			if id == "123" {
