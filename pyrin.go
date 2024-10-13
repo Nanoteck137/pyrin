@@ -1,20 +1,16 @@
 package pyrin
 
 import (
-	"encoding/json"
 	"net/http"
 
-	"github.com/go-viper/mapstructure/v2"
-	"github.com/kr/pretty"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nanoteck137/pyrin/api"
-
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/nanoteck137/pyrin/tools/validate"
 )
 
 type Body interface {
-	validation.Validatable
+	validate.Validatable
 }
 
 type Context interface {
@@ -73,52 +69,60 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 				c: c,
 			}
 
-			if h.BodyType != nil && !h.RequireForm {
-				b := h.BodyType
-
-				var data map[string]any
-
-				decoder := json.NewDecoder(context.Request().Body)
-				err := decoder.Decode(&data)
-				if err != nil {
-					return err
-				}
-
-				d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-					Result:  &b,
-					TagName: "json",
-				})
-				if err != nil {
-					return err
-				}
-
-				err = d.Decode(data)
-				if err != nil {
-					return err
-				}
-
-				pretty.Println(b)
-
-				err = b.Validate()
-				if err != nil {
-					extra := make(map[string]string)
-
-					if e, ok := err.(validation.Errors); ok {
-						for k, v := range e {
-							extra[k] = v.Error()
-						}
-					}
-
-					return &api.Error{
-						Code:    400,
-						Type:    "VALIDATION_ERROR",
-						Message: "Body Validation error",
-						Extra:   extra,
-					}
-				}
-
-				context.body = b
-			}
+			// if h.BodyType != nil && !h.RequireForm {
+			// 	b := h.BodyType
+			//
+			// 	var data map[string]any
+			//
+			// 	decoder := json.NewDecoder(context.Request().Body)
+			// 	err := decoder.Decode(&data)
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			//
+			// 	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			// 		Result:  &b,
+			// 		TagName: "json",
+			// 	})
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			//
+			// 	err = d.Decode(data)
+			// 	if err != nil {
+			// 		pretty.Println(err)
+			// 		e := errors.Unwrap(err)
+			// 		pretty.Println(e)
+			//
+			// 		b := e.(interface{ Unwrap() []error })
+			// 		l := b.Unwrap()
+			// 		pretty.Println(l)
+			//
+			// 		return err
+			// 	}
+			//
+			// 	pretty.Println(b)
+			//
+			// 	err = b.Validate()
+			// 	if err != nil {
+			// 		extra := make(map[string]string)
+			//
+			// 		if e, ok := err.(validation.Errors); ok {
+			// 			for k, v := range e {
+			// 				extra[k] = v.Error()
+			// 			}
+			// 		}
+			//
+			// 		return &api.Error{
+			// 			Code:    400,
+			// 			Type:    "VALIDATION_ERROR",
+			// 			Message: "Body Validation error",
+			// 			Extra:   extra,
+			// 		}
+			// 	}
+			//
+			// 	context.body = b
+			// }
 
 			data, err := h.HandlerFunc(context)
 			if err != nil {
