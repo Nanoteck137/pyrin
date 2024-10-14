@@ -20,9 +20,9 @@ import (
 )
 
 var genTsCmd = &cobra.Command{
-	Use:  "ts <SERVER_SPEC>",
+	Use:   "ts <SERVER_SPEC>",
 	Short: "Generate Typescript code",
-	Args: cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		input := args[0]
 		output, _ := cmd.Flags().GetString("output")
@@ -110,9 +110,9 @@ var genTsCmd = &cobra.Command{
 }
 
 var genGoCmd = &cobra.Command{
-	Use:  "go <SERVER_SPEC>",
+	Use:   "go <SERVER_SPEC>",
 	Short: "Generate Golang code",
-	Args: cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		input := args[0]
 		output, _ := cmd.Flags().GetString("output")

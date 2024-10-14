@@ -19,6 +19,7 @@ type Type interface {
 }
 
 type TypeString struct{}
+
 // TODO(patrik): Rename to number, or have bit size
 type TypeInt struct{}
 type TypeBoolean struct{}
@@ -193,8 +194,8 @@ func (resolver *Resolver) Resolve(name string) (Type, error) {
 						fields[index].Type = ty
 					} else {
 						fields = append(fields, Field{
-							Name: df.Name,
-							Type: ty,
+							Name:     df.Name,
+							Type:     ty,
 							Optional: df.Omit,
 						})
 					}

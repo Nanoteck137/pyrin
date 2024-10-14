@@ -11,7 +11,6 @@ type GeneratorStack struct {
 	generators []Generator
 }
 
-
 func (stack *GeneratorStack) Generate(resolver *resolve.Resolver) error {
 	for _, gen := range stack.generators {
 		err := gen.Generate(resolver)
