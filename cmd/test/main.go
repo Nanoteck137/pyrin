@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"regexp"
 
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/api"
 	"github.com/nanoteck137/pyrin/tools/validate"
+	"github.com/nanoteck137/pyrin/tools/validate/rules"
 )
 
 type TestBody struct {
@@ -24,9 +24,9 @@ var usernameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
 
 func (b TestBody) Validate(v validate.Validator) error {
 	return v.Struct(&b,
-		v.Field(&b.Username, validation.Required, validation.Length(4, 32), validation.Match(usernameRegex).Error("not valid username")),
-		v.Field(&b.Password, validation.Required, validation.Length(8, 32)),
-		v.Field(&b.ConfirmPassword, validation.Required, validation.Length(8, 32), validation.By(func(value interface{}) error {
+		v.Field(&b.Username, rules.Required, rules.Length(4, 32), rules.Match(usernameRegex).Error("not valid username")),
+		v.Field(&b.Password, rules.Required, rules.Length(8, 32)),
+		v.Field(&b.ConfirmPassword, rules.Required, rules.By(func(value interface{}) error {
 			s, _ := value.(string)
 
 			if s != b.Password {
