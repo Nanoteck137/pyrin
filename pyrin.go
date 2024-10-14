@@ -16,7 +16,6 @@ type Body interface {
 type Context interface {
 	Request() *http.Request
 	Param(name string) string
-	Body() any
 }
 
 type HandlerFunc func(c Context) (any, error)
@@ -40,12 +39,7 @@ type Group interface {
 var _ Context = (*wrapperContext)(nil)
 
 type wrapperContext struct {
-	c    echo.Context
-	body any
-}
-
-func (w *wrapperContext) Body() any {
-	return w.body
+	c echo.Context
 }
 
 func (w *wrapperContext) Request() *http.Request {
@@ -68,61 +62,6 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 			context := &wrapperContext{
 				c: c,
 			}
-
-			// if h.BodyType != nil && !h.RequireForm {
-			// 	b := h.BodyType
-			//
-			// 	var data map[string]any
-			//
-			// 	decoder := json.NewDecoder(context.Request().Body)
-			// 	err := decoder.Decode(&data)
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			//
-			// 	d, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-			// 		Result:  &b,
-			// 		TagName: "json",
-			// 	})
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			//
-			// 	err = d.Decode(data)
-			// 	if err != nil {
-			// 		pretty.Println(err)
-			// 		e := errors.Unwrap(err)
-			// 		pretty.Println(e)
-			//
-			// 		b := e.(interface{ Unwrap() []error })
-			// 		l := b.Unwrap()
-			// 		pretty.Println(l)
-			//
-			// 		return err
-			// 	}
-			//
-			// 	pretty.Println(b)
-			//
-			// 	err = b.Validate()
-			// 	if err != nil {
-			// 		extra := make(map[string]string)
-			//
-			// 		if e, ok := err.(validation.Errors); ok {
-			// 			for k, v := range e {
-			// 				extra[k] = v.Error()
-			// 			}
-			// 		}
-			//
-			// 		return &api.Error{
-			// 			Code:    400,
-			// 			Type:    "VALIDATION_ERROR",
-			// 			Message: "Body Validation error",
-			// 			Extra:   extra,
-			// 		}
-			// 	}
-			//
-			// 	context.body = b
-			// }
 
 			data, err := h.HandlerFunc(context)
 			if err != nil {

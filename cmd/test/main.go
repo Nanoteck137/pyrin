@@ -36,22 +36,9 @@ func (b TestBody) Validate(v validate.Validator) error {
 			return nil
 		})),
 	)
-
-	// return validation.ValidateStruct(&b,
-	// 	validation.Field(&b.Username, validation.Required, validation.Length(4, 32), validation.Match(usernameRegex).Error("not valid username")),
-	// 	validation.Field(&b.Password, validation.Required, validation.Length(8, 32)),
-	// 	validation.Field(&b.ConfirmPassword, validation.Required, validation.Length(8, 32), validation.By(func(value interface{}) error {
-	// 		s, _ := value.(string)
-	//
-	// 		if s != b.Password {
-	// 			return errors.New("password mismatch")
-	// 		}
-	//
-	// 		return nil
-	// 	})),
-	// )
 }
 
+// TODO(patrik): Move to pyrin.go
 func Body[T validate.Validatable](c pyrin.Context) (T, error) {
 	var res T
 
