@@ -18,6 +18,7 @@ type Context interface {
 	Param(name string) string
 }
 
+
 type HandlerFunc func(c Context) (any, error)
 
 type Handler struct {
@@ -32,10 +33,6 @@ type Handler struct {
 	HandlerFunc HandlerFunc
 }
 
-type Group interface {
-	Register(handlers ...Handler)
-}
-
 var _ Context = (*wrapperContext)(nil)
 
 type wrapperContext struct {
@@ -48,6 +45,22 @@ func (w *wrapperContext) Request() *http.Request {
 
 func (w *wrapperContext) Param(name string) string {
 	return w.c.Param(name)
+}
+
+type Router interface {
+	Group(prefix string) Group
+}
+
+type ServerRouter struct {
+	e *echo.Echo
+}
+
+func (r *ServerRouter) Group(prefix string) Group {
+	return newServerGroup(r.e, prefix)
+}
+
+type Group interface {
+	Register(handlers ...Handler)
 }
 
 type ServerGroup struct {
@@ -109,12 +122,24 @@ func errorHandler(err error, c echo.Context) {
 	}
 }
 
-func NewServer() *Server {
+type ServerConfig struct {
+	RegisterHandlers func(router Router)
+}
+
+func NewServer(config *ServerConfig) *Server {
 	e := echo.New()
 	e.HTTPErrorHandler = errorHandler
 
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
+
+	router := ServerRouter{
+		e: e,
+	}
+
+	if(config.RegisterHandlers != nil) {
+		config.RegisterHandlers(&router)
+	}
 
 	return &Server{
 		e: e,

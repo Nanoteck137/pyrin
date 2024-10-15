@@ -73,40 +73,42 @@ func Body[T validate.Validatable](c pyrin.Context) (T, error) {
 }
 
 func main() {
-	server := pyrin.NewServer()
+	server := pyrin.NewServer(&pyrin.ServerConfig{
+		RegisterHandlers: func(router pyrin.Router) {
+			v1 := router.Group("/api/v1")
+			v1.Register(pyrin.Handler{
+				Name:     "Test",
+				Method:   http.MethodPost,
+				Path:     "/test/:id",
+				DataType: nil,
+				BodyType: TestBody{},
+				Errors:   []api.ErrorType{},
+				HandlerFunc: func(c pyrin.Context) (any, error) {
+					id := c.Param("id")
 
-	v1 := server.Group("/api/v1")
-	v1.Register(pyrin.Handler{
-		Name:     "Test",
-		Method:   http.MethodPost,
-		Path:     "/test/:id",
-		DataType: nil,
-		BodyType: TestBody{},
-		Errors:   []api.ErrorType{},
-		HandlerFunc: func(c pyrin.Context) (any, error) {
-			id := c.Param("id")
+					// body := c.Body().(TestBody)
+					body, err := Body[TestBody](c)
+					if err != nil {
+						return nil, err
+					}
+					pretty.Println(body)
 
-			// body := c.Body().(TestBody)
-			body, err := Body[TestBody](c)
-			if err != nil {
-				return nil, err
-			}
-			pretty.Println(body)
+					if id == "123" {
+						return struct {
+							Value int `json:"value"`
+						}{
+							Value: 123,
+						}, nil
+					}
 
-			if id == "123" {
-				return struct {
-					Value int `json:"value"`
-				}{
-					Value: 123,
-				}, nil
-			}
-
-			return nil, &api.Error{
-				Code:    404,
-				Type:    "NOT_FOUND_TEST",
-				Message: "Testing",
-				Extra:   nil,
-			}
+					return nil, &api.Error{
+						Code:    404,
+						Type:    "NOT_FOUND_TEST",
+						Message: "Testing",
+						Extra:   nil,
+					}
+				},
+			})
 		},
 	})
 
