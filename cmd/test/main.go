@@ -5,9 +5,11 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 
 	"github.com/kr/pretty"
+	"github.com/labstack/echo/v4"
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/api"
 	"github.com/nanoteck137/pyrin/tools/validate"
@@ -72,11 +74,36 @@ func Body[T validate.Validatable](c pyrin.Context) (T, error) {
 	return res, nil
 }
 
+// TODO(patrik): Add to pyrin helpers
+func fsFile(w http.ResponseWriter, r *http.Request, file string) error {
+	f, err := os.Open(file)
+	if err != nil {
+		// TODO(patrik): Add NoContentError to pyrin
+		return echo.ErrNotFound
+	}
+	defer f.Close()
+
+	fi, _ := f.Stat()
+
+	http.ServeContent(w, r, fi.Name(), fi.ModTime(), f)
+
+	return nil
+}
+
 func main() {
 	server := pyrin.NewServer(&pyrin.ServerConfig{
 		RegisterHandlers: func(router pyrin.Router) {
+			root := router.Group("")
+			root.Register(pyrin.NormalHandler{
+				Method:      http.MethodGet,
+				Path:        "/file",
+				HandlerFunc: func(c pyrin.Context) error {
+					return fsFile(c.Response(), c.Request(), "pyrin.go")
+				},
+			})
+
 			v1 := router.Group("/api/v1")
-			v1.Register(pyrin.Handler{
+			v1.Register(pyrin.ApiHandler{
 				Name:     "Test",
 				Method:   http.MethodPost,
 				Path:     "/test/:id",

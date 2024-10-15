@@ -15,13 +15,17 @@ type Body interface {
 
 type Context interface {
 	Request() *http.Request
+	Response() http.ResponseWriter
 	Param(name string) string
 }
 
+type Handler interface {
+	handlerType()
+}
 
-type HandlerFunc func(c Context) (any, error)
+type ApiHandlerFunc func(c Context) (any, error)
 
-type Handler struct {
+type ApiHandler struct {
 	Name        string
 	Method      string
 	Path        string
@@ -30,13 +34,30 @@ type Handler struct {
 	RequireForm bool
 	Errors      []api.ErrorType
 	Middlewares []echo.MiddlewareFunc
-	HandlerFunc HandlerFunc
+	HandlerFunc ApiHandlerFunc
 }
+
+func (h ApiHandler) handlerType() {}
+
+type NormalHandlerFunc func(c Context) error
+
+type NormalHandler struct {
+	Method      string
+	Path        string
+	Middlewares []echo.MiddlewareFunc
+	HandlerFunc NormalHandlerFunc
+}
+
+func (h NormalHandler) handlerType() {}
 
 var _ Context = (*wrapperContext)(nil)
 
 type wrapperContext struct {
 	c echo.Context
+}
+
+func (w *wrapperContext) Response() http.ResponseWriter {
+	return w.c.Response()
 }
 
 func (w *wrapperContext) Request() *http.Request {
@@ -70,21 +91,31 @@ type ServerGroup struct {
 
 func (g *ServerGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
-		// log.Debug("Registering", "method", h.Method, "name", h.Name, "path", g.Prefix+h.Path)
-		wrapHandler := func(c echo.Context) error {
-			context := &wrapperContext{
-				c: c,
+		switch h := h.(type) {
+		case ApiHandler:
+			wrapHandler := func(c echo.Context) error {
+				context := &wrapperContext{
+					c: c,
+				}
+
+				data, err := h.HandlerFunc(context)
+				if err != nil {
+					return err
+				}
+
+				return c.JSON(200, api.SuccessResponse(data))
 			}
 
-			data, err := h.HandlerFunc(context)
-			if err != nil {
-				return err
+			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
+		case NormalHandler:
+			wrapHandler := func(c echo.Context) error {
+				context := &wrapperContext{
+					c: c,
+				}
+				return h.HandlerFunc(context)
 			}
-
-			return c.JSON(200, api.SuccessResponse(data))
+			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
 		}
-
-		g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
 	}
 }
 
@@ -137,7 +168,7 @@ func NewServer(config *ServerConfig) *Server {
 		e: e,
 	}
 
-	if(config.RegisterHandlers != nil) {
+	if config.RegisterHandlers != nil {
 		config.RegisterHandlers(&router)
 	}
 
@@ -178,14 +209,17 @@ func NewRouteGroup(prefix string) *RouteGroup {
 
 func (r *RouteGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
-		r.Routes = append(r.Routes, Route{
-			Name:        h.Name,
-			Path:        r.Prefix + h.Path,
-			Method:      h.Method,
-			ErrorTypes:  h.Errors,
-			Data:        h.DataType,
-			Body:        h.BodyType,
-			RequireForm: h.RequireForm,
-		})
+		switch h := h.(type) {
+		case ApiHandler:
+			r.Routes = append(r.Routes, Route{
+				Name:        h.Name,
+				Path:        r.Prefix + h.Path,
+				Method:      h.Method,
+				ErrorTypes:  h.Errors,
+				Data:        h.DataType,
+				Body:        h.BodyType,
+				RequireForm: h.RequireForm,
+			})
+		}
 	}
 }
