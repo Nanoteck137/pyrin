@@ -3,6 +3,7 @@ package pyrin
 import (
 	"net/http"
 
+	"github.com/MadAppGang/httplog/echolog"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nanoteck137/pyrin/api"
@@ -155,12 +156,18 @@ func errorHandler(err error, c echo.Context) {
 
 type ServerConfig struct {
 	RegisterHandlers func(router Router)
+	LogName string
 }
 
 func NewServer(config *ServerConfig) *Server {
 	e := echo.New()
 	e.HTTPErrorHandler = errorHandler
 
+	if config.LogName == "" {
+		config.LogName = "Pyrin Server"
+	}
+
+	e.Use(echolog.LoggerWithName(config.LogName))
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
