@@ -63,12 +63,7 @@ func Body[T validate.Validatable](c pyrin.Context) (T, error) {
 			}
 		}
 
-		return res, &api.Error{
-			Code:    400,
-			Type:    "VALIDATION_ERROR",
-			Message: "Body Validation error",
-			Extra:   extra,
-		}
+		return res, pyrin.ValidationError(extra)
 	}
 
 	return res, nil
@@ -95,8 +90,8 @@ func main() {
 		RegisterHandlers: func(router pyrin.Router) {
 			root := router.Group("")
 			root.Register(pyrin.NormalHandler{
-				Method:      http.MethodGet,
-				Path:        "/file",
+				Method: http.MethodGet,
+				Path:   "/file",
 				HandlerFunc: func(c pyrin.Context) error {
 					return fsFile(c.Response(), c.Request(), "pyrin.go")
 				},
@@ -109,7 +104,7 @@ func main() {
 				Path:     "/test/:id",
 				DataType: nil,
 				BodyType: TestBody{},
-				Errors:   []api.ErrorType{},
+				Errors:   []pyrin.ErrorType{},
 				HandlerFunc: func(c pyrin.Context) (any, error) {
 					id := c.Param("id")
 
@@ -128,7 +123,7 @@ func main() {
 						}, nil
 					}
 
-					return nil, &api.Error{
+					return nil, &pyrin.Error{
 						Code:    404,
 						Type:    "NOT_FOUND_TEST",
 						Message: "Testing",

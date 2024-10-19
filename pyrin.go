@@ -6,7 +6,6 @@ import (
 	"github.com/MadAppGang/httplog/echolog"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/nanoteck137/pyrin/api"
 	"github.com/nanoteck137/pyrin/tools/validate"
 )
 
@@ -33,7 +32,7 @@ type ApiHandler struct {
 	DataType    any
 	BodyType    Body
 	RequireForm bool
-	Errors      []api.ErrorType
+	Errors      []ErrorType
 	Middlewares []echo.MiddlewareFunc
 	HandlerFunc ApiHandlerFunc
 }
@@ -104,7 +103,7 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 					return err
 				}
 
-				return c.JSON(200, api.SuccessResponse(data))
+				return c.JSON(200, SuccessResponse(data))
 			}
 
 			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
@@ -132,20 +131,18 @@ type Server struct {
 	e *echo.Echo
 }
 
-const ErrTypeUnknownError api.ErrorType = "UNKNOWN_ERROR"
-
 func errorHandler(err error, c echo.Context) {
 	switch err := err.(type) {
-	case *api.Error:
-		c.JSON(err.Code, api.ErrorResponse(*err))
+	case *Error:
+		c.JSON(err.Code, ErrorResponse(*err))
 	case *echo.HTTPError:
-		c.JSON(err.Code, api.ErrorResponse(api.Error{
+		c.JSON(err.Code, ErrorResponse(Error{
 			Code:    err.Code,
 			Type:    ErrTypeUnknownError,
 			Message: err.Error(),
 		}))
 	default:
-		c.JSON(500, api.ErrorResponse(api.Error{
+		c.JSON(500, ErrorResponse(Error{
 			Code: 500,
 			Type: ErrTypeUnknownError,
 			// Message: "Internal Server Error",
@@ -156,12 +153,16 @@ func errorHandler(err error, c echo.Context) {
 
 type ServerConfig struct {
 	RegisterHandlers func(router Router)
-	LogName string
+	LogName          string
 }
 
 func NewServer(config *ServerConfig) *Server {
 	e := echo.New()
 	e.HTTPErrorHandler = errorHandler
+
+	e.RouteNotFound("/*", func(c echo.Context) error {
+		return RouteNotFound()
+	})
 
 	if config.LogName == "" {
 		config.LogName = "Pyrin Server"
@@ -196,7 +197,7 @@ type Route struct {
 	Name        string
 	Path        string
 	Method      string
-	ErrorTypes  []api.ErrorType
+	ErrorTypes  []ErrorType
 	Data        any
 	Body        any
 	RequireForm bool
