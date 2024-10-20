@@ -241,7 +241,6 @@ func (r *RouteGroup) Register(handlers ...Handler) {
 	}
 }
 
-
 func ServeFile(w http.ResponseWriter, r *http.Request, filesystem fs.FS, file string) error {
 	f, err := filesystem.Open(file)
 	if err != nil {
@@ -297,12 +296,12 @@ func GenerateSpec(routes []Route) (*spec.Server, error) {
 
 			name, err := c.TranslateName(t.Name(), t.PkgPath())
 			if err != nil {
-		return nil, err
+				return nil, err
 			}
 
 			_, err = resolver.Resolve(name)
 			if err != nil {
-		return nil, err
+				return nil, err
 			}
 
 			responseType = name
@@ -313,12 +312,12 @@ func GenerateSpec(routes []Route) (*spec.Server, error) {
 
 			name, err := c.TranslateName(t.Name(), t.PkgPath())
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			_, err = resolver.Resolve(name)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			bodyType = name
@@ -384,18 +383,6 @@ func GenerateSpec(routes []Route) (*spec.Server, error) {
 		}
 	}
 
-	// d, err := json.MarshalIndent(s, "", "  ")
-	// if err != nil {
-	// 	log.Fatal("Failed to marshal server", "err", err)
-	// }
-	//
-	// out := "./misc/pyrin.json"
-	// err = os.WriteFile(out, d, 0644)
-	// if err != nil {
-	// 	log.Fatal("Failed to write pyrin.json", "err", err)
-	// }
-	//
-	// log.Info("Wrote 'misc/pyrin.json'")
 
 	return s, nil
 }
