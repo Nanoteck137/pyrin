@@ -10,6 +10,12 @@ const (
 	ErrTypeValidationError ErrorType = "VALIDATION_ERROR"
 )
 
+var globalErrors = []ErrorType{
+	ErrTypeUnknownError,
+	ErrTypeRouteNotFound,
+	ErrTypeValidationError,
+}
+
 type ErrorType string
 
 type Error struct {

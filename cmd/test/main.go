@@ -11,7 +11,6 @@ import (
 	"github.com/kr/pretty"
 	"github.com/labstack/echo/v4"
 	"github.com/nanoteck137/pyrin"
-	"github.com/nanoteck137/pyrin/api"
 	"github.com/nanoteck137/pyrin/tools/validate"
 	"github.com/nanoteck137/pyrin/tools/validate/rules"
 )
@@ -93,7 +92,8 @@ func main() {
 				Method: http.MethodGet,
 				Path:   "/file",
 				HandlerFunc: func(c pyrin.Context) error {
-					return fsFile(c.Response(), c.Request(), "pyrin.go")
+					fs := os.DirFS(".")
+					return pyrin.ServeFile(c.Response(), c.Request(), fs, "pyrin.go")
 				},
 			})
 
