@@ -4,10 +4,13 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/tools/extract"
 	"github.com/nanoteck137/pyrin/tools/resolve"
 	"github.com/nanoteck137/pyrin/utils"
 )
+
+
 
 func GenerateSpec(routes []Route) (*Server, error) {
 	s := &Server{}
@@ -71,9 +74,9 @@ func GenerateSpec(routes []Route) (*Server, error) {
 			bodyType = name
 		}
 
-		types := make(map[ErrorType]struct{})
+		types := make(map[pyrin.ErrorType]struct{})
 
-		for _, t := range globalErrors {
+		for _, t := range pyrin.GlobalErrors {
 			types[t] = struct{}{}
 		}
 

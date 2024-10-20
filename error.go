@@ -10,7 +10,7 @@ const (
 	ErrTypeValidationError ErrorType = "VALIDATION_ERROR"
 )
 
-var globalErrors = []ErrorType{
+var GlobalErrors = []ErrorType{
 	ErrTypeUnknownError,
 	ErrTypeRouteNotFound,
 	ErrTypeValidationError,
