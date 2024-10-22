@@ -96,6 +96,7 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
 		switch h := h.(type) {
 		case ApiHandler:
+			// TODO(patrik): Check for Content-Type
 			wrapHandler := func(c echo.Context) error {
 				context := &wrapperContext{
 					c: c,
