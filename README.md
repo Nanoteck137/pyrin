@@ -9,3 +9,6 @@ REST API Framework
     - [ ] Golang
     - [ ] Typescript
 - [ ] API Docs Generation
+
+# Projects Used
+- [ozzo-validation](https://github.com/go-ozzo/ozzo-validation)
