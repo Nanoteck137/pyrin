@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type Client struct {
@@ -26,6 +27,7 @@ func (c *Client) SetToken(token string) {
 
 type Options struct {
 	QueryParams map[string]string
+	Boundary string
 }
 
 func createUrl(addr, path string, query map[string]string) (string, error) {
@@ -69,6 +71,26 @@ type RequestData struct {
 	Body  any
 }
 
+func rawRequest(data *RequestData, contentType string, bodyReader io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(data.Method, data.Url, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.Token != "" {
+		req.Header.Add("Authorization", "Bearer "+data.Token)
+	}
+
+	req.Header.Set("Content-Type", contentType)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
 func Request[D any](data RequestData) (*D, error) {
 	var bodyReader io.Reader
 
@@ -83,16 +105,7 @@ func Request[D any](data RequestData) (*D, error) {
 		bodyReader = &buf
 	}
 
-	req, err := http.NewRequest(data.Method, data.Url, bodyReader)
-	if err != nil {
-		return nil, err
-	}
-
-	if data.Token != "" {
-		req.Header.Add("Authorization", "Bearer "+data.Token)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := rawRequest(&data, "application/json", bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +120,35 @@ func Request[D any](data RequestData) (*D, error) {
 	if res.Status == "error" {
 		return nil, res.Error
 	}
-	
+
+	return &res.Data, nil
+}
+
+// NOTE(patrik): Copied from multipart.Writer.FormDataContentType
+func createFormContentType(b string) string {
+	if strings.ContainsAny(b, `()<>@,;:\"/[]?= `) {
+		b = `"` + b + `"`
+	}
+	return "multipart/form-data; boundary=" + b
+}
+
+func RequestForm[D any](data RequestData, boundary string, body Reader) (*D, error) {
+	ct := createFormContentType(boundary)
+	resp, err := rawRequest(&data, ct, body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var res ApiResponse[D, any]
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.Status == "error" {
+		return nil, res.Error
+	}
 
 	return &res.Data, nil
 }
@@ -117,3 +158,7 @@ func Sprintf(format string, a ...any) string {
 	return fmt.Sprintf(format, a...)
 }
 
+// Copy of io.Reader interface
+type Reader interface {
+	Read(p []byte) (n int, err error)
+}

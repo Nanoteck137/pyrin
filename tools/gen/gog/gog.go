@@ -103,8 +103,10 @@ func generateCodeForEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 		fmt.Fprintf(&b, "%s string, ", v)
 	}
 
-	if e.BodyType != "" {
+	if e.BodyType != "" && !e.RequireFormData {
 		fmt.Fprintf(&b, "body %s, ", e.BodyType)
+	} else if e.RequireFormData {
+		fmt.Fprintf(&b, "body Reader, ")
 	}
 
 	fmt.Fprintf(&b, "options Options")
@@ -148,7 +150,11 @@ func generateCodeForEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 	w.Unindent()
 	w.IWritef("}\n")
 
-	w.IWritef("return Request[%s](data)\n", resType)
+	if !e.RequireFormData {
+		w.IWritef("return Request[%s](data)\n", resType)
+	} else {
+		w.IWritef("return RequestForm[%s](data, options.Boundary, body)\n", resType)
+	}
 
 	w.Unindent()
 	w.IWritef("}\n")
