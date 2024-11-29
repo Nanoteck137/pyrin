@@ -1,18 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/kr/pretty"
-	"github.com/labstack/echo/v4"
 	"github.com/nanoteck137/pyrin"
-	"github.com/nanoteck137/pyrin/tools/validate"
-	"github.com/nanoteck137/pyrin/tools/validate/rules"
+	"github.com/nanoteck137/validate"
 )
 
 type TestBody struct {
@@ -23,11 +21,15 @@ type TestBody struct {
 
 var usernameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
 
-func (b TestBody) Validate(v validate.Validator) error {
-	return v.Struct(&b,
-		v.Field(&b.Username, rules.Required, rules.Length(4, 32), rules.Match(usernameRegex).Error("not valid username")),
-		v.Field(&b.Password, rules.Required, rules.Length(8, 32)),
-		v.Field(&b.ConfirmPassword, rules.Required, rules.By(func(value interface{}) error {
+func (b *TestBody) Transform() {
+	b.Username = strings.TrimSpace(b.Username)
+}
+
+func (b TestBody) Validate() error {
+	return validate.ValidateStruct(&b,
+		validate.Field(&b.Username, validate.Required, validate.Length(4, 32), validate.Match(usernameRegex).Error("not valid username")),
+		validate.Field(&b.Password, validate.Required, validate.Length(8, 32)),
+		validate.Field(&b.ConfirmPassword, validate.Required, validate.By(func(value interface{}) error {
 			s, _ := value.(string)
 
 			if s != b.Password {
@@ -37,51 +39,6 @@ func (b TestBody) Validate(v validate.Validator) error {
 			return nil
 		})),
 	)
-}
-
-// TODO(patrik): Move to pyrin.go
-func Body[T validate.Validatable](c pyrin.Context) (T, error) {
-	var res T
-
-	decoder := json.NewDecoder(c.Request().Body)
-
-	err := decoder.Decode(&res)
-	if err != nil {
-		pretty.Println(err)
-		return res, err
-	}
-
-	validator := validate.NormalValidator{}
-	err = res.Validate(&validator)
-	if err != nil {
-		extra := make(map[string]string)
-
-		if e, ok := err.(validate.Errors); ok {
-			for k, v := range e {
-				extra[k] = v.Error()
-			}
-		}
-
-		return res, pyrin.ValidationError(extra)
-	}
-
-	return res, nil
-}
-
-// TODO(patrik): Add to pyrin helpers
-func fsFile(w http.ResponseWriter, r *http.Request, file string) error {
-	f, err := os.Open(file)
-	if err != nil {
-		// TODO(patrik): Add NoContentError to pyrin
-		return echo.ErrNotFound
-	}
-	defer f.Close()
-
-	fi, _ := f.Stat()
-
-	http.ServeContent(w, r, fi.Name(), fi.ModTime(), f)
-
-	return nil
 }
 
 func main() {
@@ -108,8 +65,7 @@ func main() {
 				HandlerFunc: func(c pyrin.Context) (any, error) {
 					id := c.Param("id")
 
-					// body := c.Body().(TestBody)
-					body, err := Body[TestBody](c)
+					body, err := pyrin.Body[TestBody](c)
 					if err != nil {
 						return nil, err
 					}

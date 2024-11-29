@@ -8,6 +8,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/kr/pretty v0.3.1
 	github.com/labstack/echo/v4 v4.12.0
+	github.com/nanoteck137/validate v0.0.0-20241129211421-90ceb11de343
 	github.com/spf13/cobra v1.8.0
 )
 

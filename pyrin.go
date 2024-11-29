@@ -1,6 +1,7 @@
 package pyrin
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"io/fs"
@@ -9,17 +10,17 @@ import (
 	"github.com/MadAppGang/httplog/echolog"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/nanoteck137/pyrin/tools/validate"
+	"github.com/nanoteck137/validate"
 )
-
-type Body interface {
-	validate.Validatable
-}
 
 type Context interface {
 	Request() *http.Request
 	Response() http.ResponseWriter
 	Param(name string) string
+}
+
+type Transformable interface {
+	Transform()
 }
 
 type Handler interface {
@@ -33,7 +34,7 @@ type ApiHandler struct {
 	Method      string
 	Path        string
 	DataType    any
-	BodyType    Body
+	BodyType    any
 	RequireForm bool
 	Errors      []ErrorType
 	Middlewares []echo.MiddlewareFunc
@@ -195,6 +196,44 @@ func (s *Server) Start(addr string) error {
 
 func (s *Server) Group(prefix string, m ...echo.MiddlewareFunc) *ServerGroup {
 	return newServerGroup(s.e, prefix, m...)
+}
+
+func Body[T any](c Context) (T, error) {
+	var res T
+
+	decoder := json.NewDecoder(c.Request().Body)
+
+	if !decoder.More() {
+		// TODO(patrik): Better error
+		return res, errors.New("Empty body")
+	}
+
+	err := decoder.Decode(&res)
+	if err != nil {
+		return res, err
+	}
+
+	var p any = &res
+	if t, ok := p.(Transformable); ok {
+		t.Transform()
+	}
+
+	if v, ok := p.(validate.Validatable); ok {
+		err = v.Validate()
+		if err != nil {
+			extra := make(map[string]string)
+
+			if e, ok := err.(validate.Errors); ok {
+				for k, v := range e {
+					extra[k] = v.Error()
+				}
+			}
+
+			return res, ValidationError(extra)
+		}
+	}
+
+	return res, nil
 }
 
 func ServeFile(w http.ResponseWriter, r *http.Request, filesystem fs.FS, file string) error {
