@@ -119,7 +119,7 @@ func genNormalEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 		w.Writef(", z.undefined()")
 	}
 
-	w.Writef(", z.undefined()")
+	w.Writef(", z.any()")
 
 	if e.BodyType != "" {
 		w.Writef(", body")
