@@ -17,7 +17,7 @@ import (
 	"github.com/nanoteck137/validate"
 )
 
-const formDataKey = "data"
+const formBodyKey = "body"
 
 const jsonMimeType = "application/json"
 const multipartFormMimeType = "multipart/form-data"
@@ -59,8 +59,8 @@ type FormFileSpec struct {
 }
 
 type FormSpec struct {
-	Data  any
-	Files map[string]FormFileSpec
+	BodyType any
+	Files    map[string]FormFileSpec
 }
 
 type FormApiHandler struct {
@@ -150,11 +150,10 @@ type ServerGroup struct {
 func validateForm(spec *FormSpec, form *multipart.Form) error {
 	extra := make(map[string]string)
 
-	if spec.Data != nil {
-		fmt.Println("HERE?")
-		data, exists := form.Value[formDataKey]
-		if !exists && len(data) < 1{
-			extra[formDataKey] = "contains no data"
+	if spec.BodyType != nil {
+		data, exists := form.Value[formBodyKey]
+		if !exists && len(data) < 1 {
+			extra[formBodyKey] = "contains no data"
 		}
 	}
 
@@ -325,11 +324,13 @@ func FormFiles(c Context, key string) (Files, error) {
 	spec := wrapperContext.formSpec
 
 	if spec == nil {
+		// NOTE(patrik): These are developer faults
 		return nil, errors.New("handler cannot use forms use 'FormApiHandler'")
 	}
 
 	_, exists := spec.Files[key]
 	if !exists {
+		// NOTE(patrik): These are developer faults
 		return nil, fmt.Errorf("%s: is not valid, key is not defined in spec", key)
 	}
 
@@ -348,8 +349,10 @@ func Body[T any](c Context) (T, error) {
 	if wrapperContext.formSpec == nil {
 		body = c.Request().Body
 	} else {
-		data := c.Request().FormValue(formDataKey)
+		data := c.Request().FormValue(formBodyKey)
 		body = strings.NewReader(data)
+
+		// TODO(patrik): Add check for body type to match the spec
 	}
 
 	decoder := json.NewDecoder(body)

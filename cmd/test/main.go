@@ -114,7 +114,7 @@ func main() {
 				Method: http.MethodPost,
 				Path:   "/test",
 				Spec: pyrin.FormSpec{
-					Data: Test2Body{},
+					BodyType: Test2Body{},
 					Files: map[string]pyrin.FormFileSpec{
 						"files": {
 							NumExpected: 2,
@@ -122,8 +122,6 @@ func main() {
 					},
 				},
 				HandlerFunc: func(c pyrin.Context) (any, error) {
-					fmt.Println("HELLO WORLD")
-
 					body, err := pyrin.Body[Test2Body](c)
 					if err != nil {
 						return nil, err
