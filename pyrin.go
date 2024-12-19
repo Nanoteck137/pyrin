@@ -3,15 +3,20 @@ package pyrin
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
+	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/MadAppGang/httplog/echolog"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nanoteck137/validate"
 )
+
+const defaultMemory = 32 << 20 // 32 MB
 
 type Context interface {
 	Request() *http.Request
@@ -33,15 +38,36 @@ type ApiHandler struct {
 	Name        string
 	Method      string
 	Path        string
-	DataType    any
+	ReturnType  any
 	BodyType    any
-	RequireForm bool
 	Errors      []ErrorType
 	Middlewares []echo.MiddlewareFunc
 	HandlerFunc ApiHandlerFunc
 }
 
 func (h ApiHandler) handlerType() {}
+
+type FormFileSpec struct {
+	NumExpected int
+}
+
+type FormSpec struct {
+	Data  any
+	Files map[string]FormFileSpec
+}
+
+type FormApiHandler struct {
+	Name        string
+	Method      string
+	Path        string
+	ReturnType  any
+	Spec        FormSpec
+	Errors      []ErrorType
+	Middlewares []echo.MiddlewareFunc
+	HandlerFunc ApiHandlerFunc
+}
+
+func (h FormApiHandler) handlerType() {}
 
 type NormalHandlerFunc func(c Context) error
 
@@ -58,6 +84,8 @@ var _ Context = (*wrapperContext)(nil)
 
 type wrapperContext struct {
 	c echo.Context
+
+	formSpec *FormSpec
 }
 
 func (w *wrapperContext) Response() http.ResponseWriter {
@@ -112,6 +140,31 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 			}
 
 			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
+		case FormApiHandler:
+			// TODO(patrik): Check for Content-Type
+			wrapHandler := func(c echo.Context) error {
+				context := &wrapperContext{
+					c:        c,
+					formSpec: &h.Spec,
+				}
+
+				fmt.Printf("c.Request().Header.Get(\"Content-Type\"): %v\n", c.Request().Header.Get("Content-Type"))
+
+				err := c.Request().ParseMultipartForm(defaultMemory)
+				if err != nil {
+					return err
+				}
+
+				data, err := h.HandlerFunc(context)
+				if err != nil {
+					return err
+				}
+
+				return c.JSON(200, SuccessResponse(data))
+			}
+
+			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
+
 		case NormalHandler:
 			wrapHandler := func(c echo.Context) error {
 				context := &wrapperContext{
@@ -198,10 +251,55 @@ func (s *Server) Group(prefix string, m ...echo.MiddlewareFunc) *ServerGroup {
 	return newServerGroup(s.e, prefix, m...)
 }
 
+type Files []*multipart.FileHeader
+
+func FormFiles(c Context, key string) (Files, error) {
+	wrapperContext := c.(*wrapperContext)
+
+	spec := wrapperContext.formSpec
+
+	if spec == nil {
+		return nil, errors.New("handler cannot use forms use 'FormApiHandler'")
+	}
+
+	fileSpec, exists := spec.Files[key]
+	if !exists {
+		return nil, fmt.Errorf("%s: is not valid, key is not defined in spec", key)
+	}
+
+	_ = fileSpec
+
+	form := c.Request().MultipartForm
+	files, exists := form.File[key]
+	if !exists {
+		// TODO(patrik): User error
+		return nil, fmt.Errorf("no files entry '%s'", key)
+	}
+
+	_ = files
+
+	// TODO(patrik): Should this be more strict when checking num expected
+	if fileSpec.NumExpected != 0 && len(files) < fileSpec.NumExpected {
+		return nil, fmt.Errorf("expected %d files got %d", fileSpec.NumExpected, len(files))
+	}
+
+	return files, nil
+}
+
 func Body[T any](c Context) (T, error) {
 	var res T
 
-	decoder := json.NewDecoder(c.Request().Body)
+	wrapperContext := c.(*wrapperContext)
+
+	var body io.Reader
+	if wrapperContext.formSpec == nil {
+		body = c.Request().Body
+	} else {
+		data := c.Request().FormValue("data")
+		body = strings.NewReader(data)
+	}
+
+	decoder := json.NewDecoder(body)
 
 	if !decoder.More() {
 		// TODO(patrik): Better error
