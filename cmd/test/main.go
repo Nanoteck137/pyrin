@@ -100,7 +100,6 @@ func main() {
 						}, nil
 					}
 
-
 					return nil, &pyrin.Error{
 						Code:    404,
 						Type:    "NOT_FOUND_TEST",
@@ -118,7 +117,7 @@ func main() {
 					Data: Test2Body{},
 					Files: map[string]pyrin.FormFileSpec{
 						"files": {
-							NumExpected: 0,
+							NumExpected: 2,
 						},
 					},
 				},
@@ -137,8 +136,6 @@ func main() {
 						return nil, err
 					}
 
-					_ = files
-					// pretty.Println(files)
 					fmt.Printf("files: %v\n", files)
 
 					for _, f := range files {

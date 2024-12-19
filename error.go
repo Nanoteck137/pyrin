@@ -5,15 +5,21 @@ import "net/http"
 // TODO(patrik): Capture the original error when returning api errors
 
 const (
-	ErrTypeUnknownError    ErrorType = "UNKNOWN_ERROR"
-	ErrTypeRouteNotFound   ErrorType = "ROUTE_NOT_FOUND"
-	ErrTypeValidationError ErrorType = "VALIDATION_ERROR"
+	ErrTypeUnknownError        ErrorType = "UNKNOWN_ERROR"
+	ErrTypeRouteNotFound       ErrorType = "ROUTE_NOT_FOUND"
+	ErrTypeValidationError     ErrorType = "VALIDATION_ERROR"
+	ErrTypeFormValidationError ErrorType = "FORM_VALIDATION_ERROR"
+	ErrTypeEmptyBody           ErrorType = "EMPTY_BODY_ERROR"
+	ErrTypeBadContentType      ErrorType = "BAD_CONTENT_TYPE_ERROR"
 )
 
 var GlobalErrors = []ErrorType{
 	ErrTypeUnknownError,
 	ErrTypeRouteNotFound,
 	ErrTypeValidationError,
+	ErrTypeFormValidationError,
+	ErrTypeEmptyBody,
+	ErrTypeBadContentType,
 }
 
 type ErrorType string
@@ -63,5 +69,30 @@ func ValidationError(extra any) *Error {
 		Type:    ErrTypeValidationError,
 		Message: "Validation error",
 		Extra:   extra,
+	}
+}
+
+func FormValidationError(extra any) *Error {
+	return &Error{
+		Code:    http.StatusBadRequest,
+		Type:    ErrTypeFormValidationError,
+		Message: "Form Validation error",
+		Extra:   extra,
+	}
+}
+
+func EmptyBody() *Error {
+	return &Error{
+		Code:    http.StatusBadRequest,
+		Type:    ErrTypeEmptyBody,
+		Message: "Empty body",
+	}
+}
+
+func BadContentType(expected string) *Error {
+	return &Error{
+		Code:    http.StatusBadRequest,
+		Type:    ErrTypeBadContentType,
+		Message: "Bad Content-Type expected: " + expected,
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -16,7 +17,13 @@ import (
 	"github.com/nanoteck137/validate"
 )
 
-const defaultMemory = 32 << 20 // 32 MB
+const formDataKey = "data"
+
+const jsonMimeType = "application/json"
+const multipartFormMimeType = "multipart/form-data"
+
+// TODO(patrik): Move to server config?
+const defaultMemory = 32 << 20
 
 type Context interface {
 	Request() *http.Request
@@ -100,6 +107,25 @@ func (w *wrapperContext) Param(name string) string {
 	return w.c.Param(name)
 }
 
+func (w *wrapperContext) checkContentType(expected string) error {
+	contentType := w.c.Request().Header.Get("Content-Type")
+	if contentType == "" {
+		return BadContentType(expected)
+
+	}
+
+	typ, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return BadContentType(expected)
+	}
+
+	if typ != expected {
+		return BadContentType(expected)
+	}
+
+	return nil
+}
+
 type Router interface {
 	Group(prefix string) Group
 }
@@ -121,14 +147,47 @@ type ServerGroup struct {
 	group  *echo.Group
 }
 
+func validateForm(spec *FormSpec, form *multipart.Form) error {
+	extra := make(map[string]string)
+
+	if spec.Data != nil {
+		fmt.Println("HERE?")
+		data, exists := form.Value[formDataKey]
+		if !exists && len(data) < 1{
+			extra[formDataKey] = "contains no data"
+		}
+	}
+
+	for field, spec := range spec.Files {
+		files := form.File[field]
+		// TODO(patrik): Should this be more strict when checking num expected
+		if len(files) < spec.NumExpected {
+			extra[field] = fmt.Sprintf("expected %d or more files, got %d", spec.NumExpected, len(files))
+			continue
+		}
+	}
+
+	if len(extra) > 0 {
+		return FormValidationError(extra)
+	}
+
+	return nil
+}
+
 func (g *ServerGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
 		switch h := h.(type) {
 		case ApiHandler:
-			// TODO(patrik): Check for Content-Type
 			wrapHandler := func(c echo.Context) error {
 				context := &wrapperContext{
 					c: c,
+				}
+
+				if h.BodyType != nil {
+					err := context.checkContentType(jsonMimeType)
+					if err != nil {
+						return err
+					}
 				}
 
 				data, err := h.HandlerFunc(context)
@@ -141,16 +200,23 @@ func (g *ServerGroup) Register(handlers ...Handler) {
 
 			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
 		case FormApiHandler:
-			// TODO(patrik): Check for Content-Type
 			wrapHandler := func(c echo.Context) error {
 				context := &wrapperContext{
 					c:        c,
 					formSpec: &h.Spec,
 				}
 
-				fmt.Printf("c.Request().Header.Get(\"Content-Type\"): %v\n", c.Request().Header.Get("Content-Type"))
+				err := context.checkContentType(multipartFormMimeType)
+				if err != nil {
+					return err
+				}
 
-				err := c.Request().ParseMultipartForm(defaultMemory)
+				err = c.Request().ParseMultipartForm(defaultMemory)
+				if err != nil {
+					return err
+				}
+
+				err = validateForm(context.formSpec, c.Request().MultipartForm)
 				if err != nil {
 					return err
 				}
@@ -262,26 +328,13 @@ func FormFiles(c Context, key string) (Files, error) {
 		return nil, errors.New("handler cannot use forms use 'FormApiHandler'")
 	}
 
-	fileSpec, exists := spec.Files[key]
+	_, exists := spec.Files[key]
 	if !exists {
 		return nil, fmt.Errorf("%s: is not valid, key is not defined in spec", key)
 	}
 
-	_ = fileSpec
-
 	form := c.Request().MultipartForm
-	files, exists := form.File[key]
-	if !exists {
-		// TODO(patrik): User error
-		return nil, fmt.Errorf("no files entry '%s'", key)
-	}
-
-	_ = files
-
-	// TODO(patrik): Should this be more strict when checking num expected
-	if fileSpec.NumExpected != 0 && len(files) < fileSpec.NumExpected {
-		return nil, fmt.Errorf("expected %d files got %d", fileSpec.NumExpected, len(files))
-	}
+	files := form.File[key]
 
 	return files, nil
 }
@@ -295,15 +348,14 @@ func Body[T any](c Context) (T, error) {
 	if wrapperContext.formSpec == nil {
 		body = c.Request().Body
 	} else {
-		data := c.Request().FormValue("data")
+		data := c.Request().FormValue(formDataKey)
 		body = strings.NewReader(data)
 	}
 
 	decoder := json.NewDecoder(body)
 
 	if !decoder.More() {
-		// TODO(patrik): Better error
-		return res, errors.New("Empty body")
+		return res, EmptyBody()
 	}
 
 	err := decoder.Decode(&res)
