@@ -21,23 +21,23 @@ type Route interface {
 }
 
 type ApiRoute struct {
-	Name       string
-	Path       string
-	Method     string
-	ErrorTypes []pyrin.ErrorType
-	ReturnType any
-	BodyType   any
+	Name         string
+	Path         string
+	Method       string
+	ErrorTypes   []pyrin.ErrorType
+	ResponseType any
+	BodyType     any
 }
 
 func (r ApiRoute) routeType() {}
 
 type FormApiRoute struct {
-	Name       string
-	Path       string
-	Method     string
-	ErrorTypes []pyrin.ErrorType
-	ReturnType any
-	Spec       pyrin.FormSpec
+	Name         string
+	Path         string
+	Method       string
+	ErrorTypes   []pyrin.ErrorType
+	ResponseType any
+	Spec         pyrin.FormSpec
 }
 
 func (r FormApiRoute) routeType() {}
@@ -77,27 +77,27 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 		switch h := h.(type) {
 		case pyrin.ApiHandler:
 			r.Router.AddRoute(ApiRoute{
-				Name:       h.Name,
-				Path:       r.Prefix + h.Path,
-				Method:     h.Method,
-				ErrorTypes: h.Errors,
-				ReturnType: h.ReturnType,
-				BodyType:   h.BodyType,
+				Name:         h.Name,
+				Path:         r.Prefix + h.Path,
+				Method:       h.Method,
+				ErrorTypes:   h.Errors,
+				ResponseType: h.ResponseType,
+				BodyType:     h.BodyType,
 			})
 		case pyrin.FormApiHandler:
 			r.Router.AddRoute(FormApiRoute{
-				Name:       h.Name,
-				Path:       r.Prefix + h.Path,
-				Method:     h.Method,
-				ErrorTypes: h.Errors,
-				ReturnType: h.ReturnType,
-				Spec:       h.Spec,
+				Name:         h.Name,
+				Path:         r.Prefix + h.Path,
+				Method:       h.Method,
+				ErrorTypes:   h.Errors,
+				ResponseType: h.ResponseType,
+				Spec:         h.Spec,
 			})
 		case pyrin.NormalHandler:
 			r.Router.AddRoute(NormalRoute{
-				Name:        h.Name,
-				Path:        r.Prefix + h.Path,
-				Method:      h.Method,
+				Name:   h.Name,
+				Path:   r.Prefix + h.Path,
+				Method: h.Method,
 			})
 		}
 	}

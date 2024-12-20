@@ -21,7 +21,7 @@ func GenerateSpec(routes []Route) (*Server, error) {
 	for _, route := range routes {
 		switch route := route.(type) {
 		case ApiRoute:
-			err := c.ExtractTypes(route.ReturnType)
+			err := c.ExtractTypes(route.ResponseType)
 			if err != nil {
 				return nil, err
 			}
@@ -31,7 +31,7 @@ func GenerateSpec(routes []Route) (*Server, error) {
 				return nil, err
 			}
 		case FormApiRoute:
-			err := c.ExtractTypes(route.ReturnType)
+			err := c.ExtractTypes(route.ResponseType)
 			if err != nil {
 				return nil, err
 			}
@@ -89,7 +89,7 @@ func GenerateSpec(routes []Route) (*Server, error) {
 		case ApiRoute:
 			addErrorTypes(route.ErrorTypes)
 
-			responseType, err := getTypeName(route.ReturnType)
+			responseType, err := getTypeName(route.ResponseType)
 			if err != nil {
 				return nil, err
 			}
@@ -109,7 +109,7 @@ func GenerateSpec(routes []Route) (*Server, error) {
 		case FormApiRoute:
 			addErrorTypes(route.ErrorTypes)
 
-			responseType, err := getTypeName(route.ReturnType)
+			responseType, err := getTypeName(route.ResponseType)
 			if err != nil {
 				return nil, err
 			}

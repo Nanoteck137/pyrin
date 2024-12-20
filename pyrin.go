@@ -42,14 +42,14 @@ type Handler interface {
 type ApiHandlerFunc func(c Context) (any, error)
 
 type ApiHandler struct {
-	Name        string
-	Method      string
-	Path        string
-	ReturnType  any
-	BodyType    any
-	Errors      []ErrorType
-	Middlewares []echo.MiddlewareFunc
-	HandlerFunc ApiHandlerFunc
+	Name         string
+	Method       string
+	Path         string
+	ResponseType any
+	BodyType     any
+	Errors       []ErrorType
+	Middlewares  []echo.MiddlewareFunc
+	HandlerFunc  ApiHandlerFunc
 }
 
 func (h ApiHandler) handlerType() {}
@@ -64,14 +64,14 @@ type FormSpec struct {
 }
 
 type FormApiHandler struct {
-	Name        string
-	Method      string
-	Path        string
-	ReturnType  any
-	Spec        FormSpec
-	Errors      []ErrorType
-	Middlewares []echo.MiddlewareFunc
-	HandlerFunc ApiHandlerFunc
+	Name         string
+	Method       string
+	Path         string
+	ResponseType any
+	Spec         FormSpec
+	Errors       []ErrorType
+	Middlewares  []echo.MiddlewareFunc
+	HandlerFunc  ApiHandlerFunc
 }
 
 func (h FormApiHandler) handlerType() {}
@@ -406,7 +406,6 @@ func ServeFile(c Context, filesystem fs.FS, file string) error {
 		return errors.New("file does not implement io.ReadSeeker")
 	}
 
-	
 	http.ServeContent(c.Response(), c.Request(), fi.Name(), fi.ModTime(), ff)
 
 	return nil

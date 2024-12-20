@@ -82,9 +82,7 @@ func registerRoutes(router pyrin.Router) {
 		Name:       "Test",
 		Method:     http.MethodPost,
 		Path:       "/test/:id",
-		ReturnType: nil,
 		BodyType:   TestBody{},
-		Errors:     []pyrin.ErrorType{},
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			id := c.Param("id")
 
