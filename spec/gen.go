@@ -1,6 +1,7 @@
 package spec
 
 import (
+	"fmt"
 	"reflect"
 	"sort"
 
@@ -10,8 +11,6 @@ import (
 	"github.com/nanoteck137/pyrin/utils"
 )
 
-
-
 func GenerateSpec(routes []Route) (*Server, error) {
 	s := &Server{}
 
@@ -20,12 +19,30 @@ func GenerateSpec(routes []Route) (*Server, error) {
 	c := extract.NewContext()
 
 	for _, route := range routes {
-		if route.Data != nil {
-			c.ExtractTypes(route.Data)
-		}
+		switch route := route.(type) {
+		case ApiRoute:
+			err := c.ExtractTypes(route.ReturnType)
+			if err != nil {
+				return nil, err
+			}
 
-		if route.Body != nil {
-			c.ExtractTypes(route.Body)
+			err = c.ExtractTypes(route.BodyType)
+			if err != nil {
+				return nil, err
+			}
+		case FormApiRoute:
+			err := c.ExtractTypes(route.ReturnType)
+			if err != nil {
+				return nil, err
+			}
+
+			err = c.ExtractTypes(route.Spec.BodyType)
+			if err != nil {
+				return nil, err
+			}
+		case NormalRoute:
+		default:
+			panic(fmt.Sprintf("Unimplemented route type: %T", route))
 		}
 	}
 
@@ -38,70 +55,97 @@ func GenerateSpec(routes []Route) (*Server, error) {
 		resolver.AddSymbolDecl(decl)
 	}
 
-	for _, route := range routes {
-		responseType := ""
-		bodyType := ""
+	errorTypes := make(map[pyrin.ErrorType]struct{})
 
-		if route.Data != nil {
-			t := reflect.TypeOf(route.Data)
-
-			name, err := c.TranslateName(t.Name(), t.PkgPath())
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = resolver.Resolve(name)
-			if err != nil {
-				return nil, err
-			}
-
-			responseType = name
+	addErrorTypes := func(types []pyrin.ErrorType) {
+		for _, t := range types {
+			errorTypes[t] = struct{}{}
 		}
-
-		if route.Body != nil {
-			t := reflect.TypeOf(route.Body)
-
-			name, err := c.TranslateName(t.Name(), t.PkgPath())
-			if err != nil {
-				return nil, err
-			}
-
-			_, err = resolver.Resolve(name)
-			if err != nil {
-				return nil, err
-			}
-
-			bodyType = name
-		}
-
-		types := make(map[pyrin.ErrorType]struct{})
-
-		for _, t := range pyrin.GlobalErrors {
-			types[t] = struct{}{}
-		}
-
-		for _, t := range route.ErrorTypes {
-			types[t] = struct{}{}
-		}
-
-		errorTypes := make([]string, 0, len(types))
-
-		for k := range types {
-			errorTypes = append(errorTypes, string(k))
-		}
-
-		sort.Strings(errorTypes)
-
-		s.Endpoints = append(s.Endpoints, Endpoint{
-			Name:            route.Name,
-			Method:          route.Method,
-			Path:            route.Path,
-			ErrorTypes:      errorTypes,
-			ResponseType:    responseType,
-			BodyType:        bodyType,
-			RequireFormData: route.RequireForm,
-		})
 	}
+
+	addErrorTypes(pyrin.GlobalErrors)
+
+	getTypeName := func(ty any) (string, error) {
+		if ty == nil {
+			return "", nil
+		}
+
+		reflectedType := reflect.TypeOf(ty)
+		name, err := c.TranslateName(reflectedType.Name(), reflectedType.PkgPath())
+		if err != nil {
+			return "", err
+		}
+
+		_, err = resolver.Resolve(name)
+		if err != nil {
+			return "", err
+		}
+
+		return name, nil
+	}
+
+	for _, route := range routes {
+		switch route := route.(type) {
+		case ApiRoute:
+			addErrorTypes(route.ErrorTypes)
+
+			responseType, err := getTypeName(route.ReturnType)
+			if err != nil {
+				return nil, err
+			}
+
+			bodyType, err := getTypeName(route.BodyType)
+			if err != nil {
+				return nil, err
+			}
+
+			s.ApiEndpoints = append(s.ApiEndpoints, ApiEndpoint{
+				Name:         route.Name,
+				Method:       route.Method,
+				Path:         route.Path,
+				ResponseType: responseType,
+				BodyType:     bodyType,
+			})
+		case FormApiRoute:
+			addErrorTypes(route.ErrorTypes)
+
+			responseType, err := getTypeName(route.ReturnType)
+			if err != nil {
+				return nil, err
+			}
+
+			bodyType, err := getTypeName(route.Spec.BodyType)
+			if err != nil {
+				return nil, err
+			}
+
+			s.FormApiEndpoints = append(s.FormApiEndpoints, FormApiEndpoint{
+				Name:         route.Name,
+				Method:       route.Method,
+				Path:         route.Path,
+				ResponseType: responseType,
+				BodyType:     bodyType,
+			})
+		case NormalRoute:
+			s.NormalEndpoints = append(s.NormalEndpoints, NormalEndpoint{
+				Name:   route.Name,
+				Method: route.Method,
+				Path:   route.Path,
+			})
+		default:
+			panic(fmt.Sprintf("Unimplemented route type: %T", route))
+		}
+	}
+
+	presentErrorType := make([]string, 0, len(errorTypes))
+
+	for errType := range errorTypes {
+		presentErrorType = append(presentErrorType, errType.String())
+	}
+
+	sort.Strings(presentErrorType)
+
+	s.ErrorTypes = presentErrorType
 
 	for _, st := range resolver.ResolvedStructs {
 		switch t := st.Type.(type) {
@@ -133,7 +177,6 @@ func GenerateSpec(routes []Route) (*Server, error) {
 			})
 		}
 	}
-
 
 	return s, nil
 }

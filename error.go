@@ -24,6 +24,10 @@ var GlobalErrors = []ErrorType{
 
 type ErrorType string
 
+func (e ErrorType) String() string {
+	return string(e)
+}
+
 type Error struct {
 	Code    int       `json:"code"`
 	Type    ErrorType `json:"type"`

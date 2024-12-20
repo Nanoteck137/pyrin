@@ -1,13 +1,25 @@
 package spec
 
-type Endpoint struct {
+type ApiEndpoint struct {
 	Name            string   `json:"name"`
 	Method          string   `json:"method"`
 	Path            string   `json:"path"`
-	ErrorTypes      []string `json:"errorTypes"`
 	ResponseType    string   `json:"responseType"`
 	BodyType        string   `json:"bodyType"`
-	RequireFormData bool     `json:"requireFormData"`
+}
+
+type FormApiEndpoint struct {
+	Name            string   `json:"name"`
+	Method          string   `json:"method"`
+	Path            string   `json:"path"`
+	ResponseType    string   `json:"responseType"`
+	BodyType        string   `json:"bodyType"`
+}
+
+type NormalEndpoint struct {
+	Name            string   `json:"name"`
+	Method          string   `json:"method"`
+	Path            string   `json:"path"`
 }
 
 type TypeField struct {
@@ -23,6 +35,9 @@ type Type struct {
 }
 
 type Server struct {
-	Types     []Type     `json:"types"`
-	Endpoints []Endpoint `json:"endpoints"`
+	ErrorTypes       []string          `json:"errorTypes"`
+	Types            []Type            `json:"types"`
+	ApiEndpoints     []ApiEndpoint     `json:"apiEndpoints"`
+	FormApiEndpoints []FormApiEndpoint `json:"formApiEndpoints"`
+	NormalEndpoints  []NormalEndpoint  `json:"normalEndpoints"`
 }

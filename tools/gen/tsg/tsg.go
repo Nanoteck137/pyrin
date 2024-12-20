@@ -65,7 +65,7 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 	return nil
 }
 
-func genNormalEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
+func generateApiEndpoint(w *utils.CodeWriter, e *spec.ApiEndpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -137,7 +137,7 @@ func genNormalEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
 	return nil
 }
 
-func genFormDataEndpoint(w *utils.CodeWriter, e *spec.Endpoint) error {
+func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
 	var args []string
 	parts := strings.Split(e.Path, "/")
 	endpointHasArgs := false
@@ -213,10 +213,11 @@ func GenerateClientCode(w io.Writer, server *spec.Server) error {
 	cw.IWritef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
 	cw.IWritef("\n")
 
-	for _, endpoint := range server.Endpoints {
-		name := strcase.ToScreamingSnake(endpoint.Name) + "_URL"
-		cw.IWritef("export const %s = \"%s\"\n", name, endpoint.Path)
-	}
+	// TODO(patrik): Add back
+	// for _, endpoint := range server.Endpoints {
+	// 	name := strcase.ToScreamingSnake(endpoint.Name) + "_URL"
+	// 	cw.IWritef("export const %s = \"%s\"\n", name, endpoint.Path)
+	// }
 
 	cw.IWritef("\n")
 
@@ -229,21 +230,25 @@ func GenerateClientCode(w io.Writer, server *spec.Server) error {
 	cw.Unindent()
 	cw.IWritef("}\n")
 
-	for _, endpoint := range server.Endpoints {
+	for _, endpoint := range server.ApiEndpoints {
 		cw.IWritef("\n")
 
-		if endpoint.RequireFormData {
-			err := genFormDataEndpoint(&cw, &endpoint)
-			if err != nil {
-				return err
-			}
-		} else {
-			err := genNormalEndpoint(&cw, &endpoint)
-			if err != nil {
-				return err
-			}
+		err := generateApiEndpoint(&cw, &endpoint)
+		if err != nil {
+			return err
 		}
 	}
+
+	for _, endpoint := range server.FormApiEndpoints {
+		cw.IWritef("\n")
+
+		err := generateFormApiEndpoint(&cw, &endpoint)
+		if err != nil {
+			return err
+		}
+	}
+
+	// TODO(patrik): Add normal endpoints with just normal fetch calls
 
 	cw.Unindent()
 	cw.IWritef("}\n")

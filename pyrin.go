@@ -79,6 +79,7 @@ func (h FormApiHandler) handlerType() {}
 type NormalHandlerFunc func(c Context) error
 
 type NormalHandler struct {
+	Name        string
 	Method      string
 	Path        string
 	Middlewares []echo.MiddlewareFunc
@@ -389,7 +390,7 @@ func Body[T any](c Context) (T, error) {
 	return res, nil
 }
 
-func ServeFile(w http.ResponseWriter, r *http.Request, filesystem fs.FS, file string) error {
+func ServeFile(c Context, filesystem fs.FS, file string) error {
 	f, err := filesystem.Open(file)
 	if err != nil {
 		// TODO(patrik): Add NoContentError to pyrin
@@ -404,7 +405,8 @@ func ServeFile(w http.ResponseWriter, r *http.Request, filesystem fs.FS, file st
 		return errors.New("file does not implement io.ReadSeeker")
 	}
 
-	http.ServeContent(w, r, fi.Name(), fi.ModTime(), ff)
+	
+	http.ServeContent(c.Response(), c.Request(), fi.Name(), fi.ModTime(), ff)
 
 	return nil
 }

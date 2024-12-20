@@ -102,6 +102,10 @@ func (c *Context) checkStruct(t reflect.Type) error {
 }
 
 func (c *Context) ExtractTypes(value any) error {
+	if value == nil {
+		return nil
+	}
+
 	t := reflect.TypeOf(value)
 	return c.checkStruct(t)
 }
