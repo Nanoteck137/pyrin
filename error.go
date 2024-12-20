@@ -1,6 +1,9 @@
 package pyrin
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 // TODO(patrik): Capture the original error when returning api errors
 
@@ -26,6 +29,14 @@ type ErrorType string
 
 func (e ErrorType) String() string {
 	return string(e)
+}
+
+type NoContentError struct {
+	Code int `json:"code"`
+}
+
+func (e *NoContentError) Error() string {
+	return fmt.Sprintf("no content error %d", e.Code)
 }
 
 type Error struct {
@@ -98,5 +109,11 @@ func BadContentType(expected string) *Error {
 		Code:    http.StatusBadRequest,
 		Type:    ErrTypeBadContentType,
 		Message: "Bad Content-Type expected: " + expected,
+	}
+}
+
+func NoContentNotFound() *NoContentError {
+	return &NoContentError{
+		Code: http.StatusNotFound,
 	}
 }

@@ -259,6 +259,8 @@ func errorHandler(err error, c echo.Context) {
 	switch err := err.(type) {
 	case *Error:
 		c.JSON(err.Code, ErrorResponse(*err))
+	case *NoContentError:
+		c.NoContent(err.Code)
 	case *echo.HTTPError:
 		c.JSON(err.Code, ErrorResponse(Error{
 			Code:    err.Code,
@@ -393,8 +395,7 @@ func Body[T any](c Context) (T, error) {
 func ServeFile(c Context, filesystem fs.FS, file string) error {
 	f, err := filesystem.Open(file)
 	if err != nil {
-		// TODO(patrik): Add NoContentError to pyrin
-		return echo.ErrNotFound
+		return NoContentNotFound()
 	}
 	defer f.Close()
 
