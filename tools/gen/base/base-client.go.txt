@@ -118,7 +118,7 @@ func Request[D any](data RequestData) (*D, error) {
 		return nil, err
 	}
 
-	if res.Status == "error" {
+	if !res.Success {
 		return nil, res.Error
 	}
 
