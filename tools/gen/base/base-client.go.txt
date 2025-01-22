@@ -11,8 +11,9 @@ import (
 )
 
 type Client struct {
-	addr  string
-	token string
+	addr      string
+	authToken string
+	apiToken  string
 }
 
 func New(addr string) *Client {
@@ -21,8 +22,12 @@ func New(addr string) *Client {
 	}
 }
 
-func (c *Client) SetToken(token string) {
-	c.token = token
+func (c *Client) SetAuthToken(token string) {
+	c.authToken = token
+}
+
+func (c *Client) SetApiToken(token string) {
+	c.apiToken = token
 }
 
 type Options struct {
@@ -51,7 +56,7 @@ type ApiError[E any] struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Type    string `json:"type"`
-	Extra  E      `json:"extra,omitempty"`
+	Extra   E      `json:"extra,omitempty"`
 }
 
 func (err *ApiError[E]) Error() string {
@@ -68,8 +73,9 @@ type RequestData struct {
 	Url    string
 	Method string
 
-	Token string
-	Body  any
+	AuthToken string
+	ApiToken  string
+	Body      any
 }
 
 func rawRequest(data *RequestData, contentType string, bodyReader io.Reader) (*http.Response, error) {
@@ -78,8 +84,12 @@ func rawRequest(data *RequestData, contentType string, bodyReader io.Reader) (*h
 		return nil, err
 	}
 
-	if data.Token != "" {
-		req.Header.Add("Authorization", "Bearer "+data.Token)
+	if data.AuthToken != "" {
+		req.Header.Add("Authorization", "Bearer "+data.AuthToken)
+	}
+
+	if data.ApiToken != "" {
+		req.Header.Add("X-Api-Token", data.ApiToken)
 	}
 
 	req.Header.Set("Content-Type", contentType)
