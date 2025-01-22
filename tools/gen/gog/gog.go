@@ -222,7 +222,8 @@ func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error
 
 	w.IWritef("Url: url,\n")
 	w.IWritef("Method: \"%v\",\n", e.Method)
-	w.IWritef("Token: c.token,\n")
+	w.IWritef("AuthToken: c.authToken,\n")
+	w.IWritef("ApiToken: c.apiToken,\n")
 
 	body := "nil"
 	if e.BodyType != "" {
