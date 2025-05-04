@@ -7,3 +7,6 @@ var BaseClientSource string
 
 //go:embed base-client.go.txt
 var BaseGoClient string
+
+//go:embed base-client.dart
+var BaseDartClient string
