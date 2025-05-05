@@ -11,6 +11,18 @@ import (
 	"github.com/nanoteck137/pyrin/utils"
 )
 
+func IsPointer(ty resolve.Type) bool {
+	switch t := ty.(type) {
+	case *resolve.TypeArray:
+		return IsPointer(t.ElementType)
+	case *resolve.TypePtr:
+		// IsPointer(t.BaseType)
+		return true
+	}
+
+	return false
+}
+
 func GenerateType(w io.Writer, ty resolve.Type) {
 	switch t := ty.(type) {
 	case *resolve.TypeString:
@@ -60,13 +72,16 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 				fmt.Fprintf(w, "  @JsonKey(name: \"%s\")\n", f.Name)
 				fmt.Fprint(w, "  final ")
 				GenerateType(w, f.Type)
+				if f.Optional && !IsPointer(f.Type) {
+					fmt.Fprintf(w, "?")
+				}
 				fmt.Fprintf(w, " %s;\n", name)
 			}
 
 			fmt.Fprintln(w)
 
 			// GetTracks(this.page, this.tracks);
-			fmt.Fprintf(w, "  %s(", s.Name)
+			fmt.Fprintf(w, "  %s({", s.Name)
 			for i, f := range ty.Fields {
 				name := f.Name
 
@@ -77,10 +92,13 @@ func GenerateTypeCode(w io.Writer, resolver *resolve.Resolver) error {
 				if i != 0 {
 					fmt.Fprint(w, ", ")
 				}
+				if !f.Optional {
+					fmt.Fprintf(w, "required ")
+				}
 				fmt.Fprintf(w, "this.%s", name)
 			}
 
-			fmt.Fprint(w, ");\n")
+			fmt.Fprint(w, "});\n")
 
 			fmt.Fprintln(w)
 
@@ -151,6 +169,7 @@ func generateApiEndpoint(w *utils.CodeWriter, e *spec.ApiEndpoint) error {
 	w.Indent()
 
 	w.IWritef("final res = await request(\"%s\", \"%s\"", e.Method, newEndpoint)
+	w.Writef(", options: options")
 	if e.BodyType != "" {
 		w.Writef(", body: body.toJson()")
 	}
