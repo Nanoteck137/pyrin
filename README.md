@@ -10,6 +10,13 @@ REST API Framework
     - [ ] Typescript
 - [ ] API Docs Generation
 
+## Packages
+- [ ] spark - Code Gen
+- [ ] ember - Database Handling
+- [ ] flare - Doc Generation
+- [ ] chisel - Filter/Sorting parsing
+- [ ] anvil - Validation
+
 # Projects Used
 - [ozzo-validation](https://github.com/go-ozzo/ozzo-validation)
 

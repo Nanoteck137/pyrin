@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,14 +9,20 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
+	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
+	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
 	"github.com/nanoteck137/validate"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type TestBody struct {
@@ -68,7 +75,7 @@ func (b Test2Body) Validate() error {
 func registerRoutes(router pyrin.Router) {
 	root := router.Group("")
 	root.Register(pyrin.NormalHandler{
-		Name: "GetFile",
+		Name:   "GetFile",
 		Method: http.MethodGet,
 		Path:   "/file",
 		HandlerFunc: func(c pyrin.Context) error {
@@ -79,10 +86,10 @@ func registerRoutes(router pyrin.Router) {
 
 	v1 := router.Group("/api/v1")
 	v1.Register(pyrin.ApiHandler{
-		Name:       "Test",
-		Method:     http.MethodPost,
-		Path:       "/test/:id",
-		BodyType:   TestBody{},
+		Name:     "Test",
+		Method:   http.MethodPost,
+		Path:     "/test/:id",
+		BodyType: TestBody{},
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			id := c.Param("id")
 
@@ -148,6 +155,91 @@ func registerRoutes(router pyrin.Router) {
 }
 
 func main() {
+	// err := os.Remove("./work/test.db")
+	// if err != nil {
+	// 	fmt.Println("err:", err)
+	// }
+
+	dbFile := "./work/test.db"
+	dbUrl := fmt.Sprintf("file:%s?_foreign_keys=true", dbFile)
+	db, err := ember.OpenDatabase("sqlite3", dbUrl)
+	if err != nil {
+		log.Fatal("err", err)
+	}
+
+	migrations := []Migration{
+		{
+			Title:   "init",
+			Version: 1,
+			Done:    false,
+			Up: func(ctx context.Context, db ember.DB) error {
+				_, err = db.Exec(ctx, RawQuery{
+					Sql: `
+					CREATE TABLE tracks(
+						id TEXT PRIMARY KEY,
+
+						title TEXT NOT NULL,
+						album_name TEXT NOT NULL,
+						aritst_name TEXT NOT NULL
+					);
+					`,
+					Params: []any{},
+				})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+			Down: func(ctx context.Context, db ember.DB) error {
+				_, err = db.Exec(ctx, RawQuery{
+					Sql: `
+					DROP TABLE tracks;
+					`,
+					Params: []any{},
+				})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			},
+		},
+		{
+			Title:   "test",
+			Version: 3,
+			Done:    false,
+			Up:      nil,
+			Down:    nil,
+		},
+		{
+			Title:   "test",
+			Version: 2,
+			Done:    false,
+			Up:      nil,
+			Down:    nil,
+		},
+		{
+			Title:   "test",
+			Version: 4,
+			Done:    false,
+			Up:      nil,
+			Down:    nil,
+		},
+	}
+
+	sort.SliceStable(migrations, func(i, j int) bool {
+		return migrations[i].Version < migrations[j].Version
+	})
+
+	ctx := context.Background()
+
+	err = SetupMigrations(ctx, db)
+	if err != nil {
+		log.Fatal("err", err)
+	}
+
+	return
 	server := pyrin.NewServer(&pyrin.ServerConfig{
 		RegisterHandlers: registerRoutes,
 	})
