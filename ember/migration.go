@@ -23,7 +23,7 @@ var (
 )
 
 func MigrationQuery(db DB) *goqu.SelectDataset {
-	return dialect.Select(migrationTable).
+	return dialect.From(migrationTable).
 		Select(
 			migrationVersion,
 			migrationApplied,
@@ -37,6 +37,7 @@ func GetAllMigrations(ctx context.Context, db DB) ([]DbMigration, error) {
 	var res []DbMigration
 	err := db.Multiple(ctx, query, &res)
 	if err != nil {
+		fmt.Printf("err: %v\n", err)
 		return nil, err
 	}
 
@@ -48,7 +49,7 @@ type CreateMigrationParams struct {
 	Applied int64
 }
 
-func CreateMigration(ctx context.Context, db ember.DB, params CreateMigrationParams) error {
+func CreateMigration(ctx context.Context, db DB, params CreateMigrationParams) error {
 	query := dialect.Insert(migrationTable).
 		Rows(goqu.Record{
 			"version": params.Version,

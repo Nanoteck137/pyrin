@@ -11,9 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"time"
 
-	"github.com/doug-martin/goqu/v9"
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/ember"
@@ -167,13 +165,13 @@ func main() {
 		log.Fatal("err", err)
 	}
 
-	migrations := []Migration{
+	migrations := []ember.Migration{
 		{
 			Title:   "init",
 			Version: 1,
 			Done:    false,
 			Up: func(ctx context.Context, db ember.DB) error {
-				_, err = db.Exec(ctx, RawQuery{
+				_, err = db.Exec(ctx, ember.RawQuery{
 					Sql: `
 					CREATE TABLE tracks(
 						id TEXT PRIMARY KEY,
@@ -192,7 +190,7 @@ func main() {
 				return nil
 			},
 			Down: func(ctx context.Context, db ember.DB) error {
-				_, err = db.Exec(ctx, RawQuery{
+				_, err = db.Exec(ctx, ember.RawQuery{
 					Sql: `
 					DROP TABLE tracks;
 					`,
@@ -234,7 +232,12 @@ func main() {
 
 	ctx := context.Background()
 
-	err = SetupMigrations(ctx, db)
+	err = ember.SetupMigrations(ctx, db)
+	if err != nil {
+		log.Fatal("err", err)
+	}
+
+	err = ember.ApplyMigrations(ctx, db, migrations)
 	if err != nil {
 		log.Fatal("err", err)
 	}
