@@ -22,10 +22,14 @@ type DB interface {
 	Multiple(ctx context.Context, query Query, dest any) error
 }
 
+type ErrorHandler func(err error) error
+
 var _ DB = (*Database)(nil)
 
 type Database struct {
 	*sqlx.DB
+
+	ErrorHandler ErrorHandler
 }
 
 func OpenDatabase(driver, dataSourceName string) (*Database, error) {
@@ -39,10 +43,18 @@ func OpenDatabase(driver, dataSourceName string) (*Database, error) {
 	}, nil
 }
 
+func (s *Database) handleErr(err error) error {
+	if s.ErrorHandler != nil {
+		return s.ErrorHandler(err)
+	}
+
+	return err
+}
+
 func (s *Database) Exec(ctx context.Context, query Query) (sql.Result, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, s.handleErr(err)
 	}
 
 	return s.ExecContext(ctx, sql, params...)
@@ -51,7 +63,7 @@ func (s *Database) Exec(ctx context.Context, query Query) (sql.Result, error) {
 func (s *Database) Multiple(ctx context.Context, query Query, dest any) error {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return err
+		return s.handleErr(err)
 	}
 
 	return s.SelectContext(ctx, dest, sql, params...)
@@ -61,7 +73,7 @@ func (s *Database) Multiple(ctx context.Context, query Query, dest any) error {
 func (s *Database) Query(ctx context.Context, query Query) (*sql.Rows, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, s.handleErr(err)
 	}
 
 	return s.QueryContext(ctx, sql, params...)
@@ -71,7 +83,7 @@ func (s *Database) Query(ctx context.Context, query Query) (*sql.Rows, error) {
 func (s *Database) QueryRow(ctx context.Context, query Query) (*sql.Row, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, s.handleErr(err)
 	}
 
 	return s.QueryRowContext(ctx, sql, params...), nil
@@ -81,7 +93,7 @@ func (s *Database) QueryRow(ctx context.Context, query Query) (*sql.Row, error) 
 func (s *Database) Single(ctx context.Context, query Query, dest any) error {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return err
+		return s.handleErr(err)
 	}
 
 	return s.GetContext(ctx, dest, sql, params...)
@@ -91,12 +103,22 @@ var _ DB = (*Tx)(nil)
 
 type Tx struct {
 	*sqlx.Tx
+
+	ErrorHandler ErrorHandler
+}
+
+func (s *Tx) handleErr(err error) error {
+	if s.ErrorHandler != nil {
+		return s.ErrorHandler(err)
+	}
+
+	return err
 }
 
 func (s *Tx) Exec(ctx context.Context, query Query) (sql.Result, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, s.handleErr(err)
 	}
 
 	return s.ExecContext(ctx, sql, params...)
@@ -105,7 +127,7 @@ func (s *Tx) Exec(ctx context.Context, query Query) (sql.Result, error) {
 func (s *Tx) Multiple(ctx context.Context, query Query, dest any) error {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return err
+		return s.handleErr(err)
 	}
 
 	return s.SelectContext(ctx, dest, sql, params...)
@@ -115,7 +137,7 @@ func (s *Tx) Multiple(ctx context.Context, query Query, dest any) error {
 func (s *Tx) Query(ctx context.Context, query Query) (*sql.Rows, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, s.handleErr(err)
 	}
 
 	return s.QueryContext(ctx, sql, params...)
@@ -125,7 +147,7 @@ func (s *Tx) Query(ctx context.Context, query Query) (*sql.Rows, error) {
 func (s *Tx) QueryRow(ctx context.Context, query Query) (*sql.Row, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return nil, err
+		return nil, s.handleErr(err)
 	}
 
 	return s.QueryRowContext(ctx, sql, params...), nil
@@ -135,7 +157,7 @@ func (s *Tx) QueryRow(ctx context.Context, query Query) (*sql.Row, error) {
 func (s *Tx) Single(ctx context.Context, query Query, dest any) error {
 	sql, params, err := query.ToSQL()
 	if err != nil {
-		return err
+		return s.handleErr(err)
 	}
 
 	return s.GetContext(ctx, dest, sql, params...)
