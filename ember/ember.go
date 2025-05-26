@@ -43,6 +43,18 @@ func OpenDatabase(driver, dataSourceName string) (*Database, error) {
 	}, nil
 }
 
+func (s *Database) Begin() (*Tx, error) {
+	tx, err := s.DB.Beginx()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Tx{
+		Tx:           tx,
+		ErrorHandler: s.ErrorHandler,
+	}, nil
+}
+
 func (s *Database) handleErr(err error) error {
 	if s.ErrorHandler != nil {
 		return s.ErrorHandler(err)
@@ -113,6 +125,14 @@ func (s *Tx) handleErr(err error) error {
 	}
 
 	return err
+}
+
+func (s *Tx) Commit() error {
+	return s.Tx.Commit()
+}
+
+func (s *Tx) Rollback() error {
+	return s.Tx.Rollback()
 }
 
 func (s *Tx) Exec(ctx context.Context, query Query) (sql.Result, error) {
