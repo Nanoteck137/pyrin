@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
@@ -18,6 +19,7 @@ import (
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
+	"github.com/nanoteck137/pyrin/trail"
 	"github.com/nanoteck137/validate"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -153,6 +155,22 @@ func registerRoutes(router pyrin.Router) {
 }
 
 func main() {
+	logger := trail.NewLogger(&trail.Options{
+		Debug: false,
+		Level: slog.LevelError,
+		// Out:   os.Stderr,
+	})
+
+	slog.SetDefault(logger.Logger)
+
+	logger.Debug("DEBUG")
+	logger.Info("INFO")
+	logger.Warn("WARN")
+	logger.Error("ERROR")
+
+	logger.Fatal("Test")
+
+	return
 	// err := os.Remove("./work/test.db")
 	// if err != nil {
 	// 	fmt.Println("err:", err)

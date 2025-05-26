@@ -16,6 +16,7 @@ REST API Framework
 - [ ] flare - Doc Generation
 - [ ] chisel - Filter/Sorting parsing
 - [ ] anvil - Validation
+- [ ] trail - Logging
 
 # Projects Used
 - [ozzo-validation](https://github.com/go-ozzo/ozzo-validation)

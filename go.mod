@@ -1,11 +1,14 @@
 module github.com/nanoteck137/pyrin
 
-go 1.21
+go 1.21.0
+
+toolchain go1.21.7
 
 require (
 	github.com/MadAppGang/httplog/echolog v1.3.0
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/fatih/structtag v1.2.0
+	github.com/golang-cz/devslog v0.0.13
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/kr/pretty v0.3.1
