@@ -211,11 +211,11 @@ type DialectWrapper struct {
 }
 
 func (dw DialectWrapper) From(table ...any) *goqu.SelectDataset {
-	return dw.DialectWrapper.From(table).Prepared(true)
+	return dw.DialectWrapper.From(table...).Prepared(true)
 }
 
 func (dw DialectWrapper) Select(cols ...any) *goqu.SelectDataset {
-	return dw.DialectWrapper.Select(cols).Prepared(true)
+	return dw.DialectWrapper.Select(cols...).Prepared(true)
 }
 
 func (dw DialectWrapper) Update(table any) *goqu.UpdateDataset {
@@ -231,7 +231,7 @@ func (dw DialectWrapper) Delete(table any) *goqu.DeleteDataset {
 }
 
 func (dw DialectWrapper) Truncate(table ...any) *goqu.TruncateDataset {
-	return dw.DialectWrapper.Truncate(table).Prepared(true)
+	return dw.DialectWrapper.Truncate(table...).Prepared(true)
 }
 
 func SqliteDialect() DialectWrapper {
