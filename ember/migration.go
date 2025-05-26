@@ -37,7 +37,6 @@ func GetAllMigrations(ctx context.Context, db DB) ([]DbMigration, error) {
 	var res []DbMigration
 	err := db.Multiple(ctx, query, &res)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
 		return nil, err
 	}
 
