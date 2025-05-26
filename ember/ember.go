@@ -9,7 +9,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-
 type Query interface {
 	ToSQL() (string, []any, error)
 }
@@ -165,8 +164,38 @@ func (q RawQuery) ToSQL() (string, []any, error) {
 	return q.Sql, q.Params, nil
 }
 
-func SqliteDialect() goqu.DialectWrapper {
-	return goqu.Dialect("pyrin_custom_sqlite")
+type DialectWrapper struct {
+	goqu.DialectWrapper
+}
+
+func (dw DialectWrapper) From(table ...any) *goqu.SelectDataset {
+	return dw.DialectWrapper.From(table).Prepared(true)
+}
+
+func (dw DialectWrapper) Select(cols ...any) *goqu.SelectDataset {
+	return dw.DialectWrapper.Select(cols).Prepared(true)
+}
+
+func (dw DialectWrapper) Update(table any) *goqu.UpdateDataset {
+	return dw.DialectWrapper.Update(table).Prepared(true)
+}
+
+func (dw DialectWrapper) Insert(table any) *goqu.InsertDataset {
+	return dw.DialectWrapper.Insert(table).Prepared(true)
+}
+
+func (dw DialectWrapper) Delete(table any) *goqu.DeleteDataset {
+	return dw.DialectWrapper.Delete(table).Prepared(true)
+}
+
+func (dw DialectWrapper) Truncate(table ...any) *goqu.TruncateDataset {
+	return dw.DialectWrapper.Truncate(table).Prepared(true)
+}
+
+func SqliteDialect() DialectWrapper {
+	return DialectWrapper{
+		DialectWrapper: goqu.Dialect("pyrin_custom_sqlite"),
+	}
 }
 
 func init() {
@@ -174,4 +203,3 @@ func init() {
 	opts.SupportsReturn = true
 	goqu.RegisterDialect("pyrin_custom_sqlite", opts)
 }
-
