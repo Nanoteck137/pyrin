@@ -3,14 +3,12 @@ package typescript
 import (
 	"bytes"
 	_ "embed"
-	"fmt"
 	"io"
 	"os"
 	"path"
 
 	"github.com/iancoleman/strcase"
 	"github.com/nanoteck137/pyrin/spark"
-	"github.com/nanoteck137/pyrin/trail"
 	"github.com/nanoteck137/pyrin/utils"
 )
 
@@ -22,9 +20,7 @@ var baseClientSource string
 
 var _ spark.Generator = (*TypescriptGenerator)(nil)
 
-type TypescriptGenerator struct {
-	Logger *trail.Logger
-}
+type TypescriptGenerator struct{}
 
 func (g *TypescriptGenerator) Generate(serverDef *spark.ServerDef, resolver *spark.Resolver, outputDir string) error {
 	buf := &bytes.Buffer{}
@@ -74,8 +70,6 @@ func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver
 
 		rs := s.ResolvedStruct
 
-		g.Logger.Debug("generating structure", "name", rs.Name, "numFields", len(rs.Fields))
-
 		err := g.generateStruct(&w, rs)
 		if err != nil {
 			return err
@@ -110,36 +104,36 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 	return nil
 }
 
-func (g *TypescriptGenerator) generateFieldType(w io.Writer, ty spark.FieldType) {
+func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldType) {
 	switch t := ty.(type) {
 	case *spark.FieldTypeString:
-		fmt.Fprint(w, "z.string()")
+		w.Writef("z.string()")
 	case *spark.FieldTypeInt:
-		fmt.Fprint(w, "z.number()")
+		w.Writef("z.number()")
 	case *spark.FieldTypeBoolean:
-		fmt.Fprint(w, "z.boolean()")
+		w.Writef("z.boolean()")
 	case *spark.FieldTypeArray:
-		fmt.Fprint(w, "z.array(")
+		w.Writef("z.array(")
 		g.generateFieldType(w, t.ElementType)
-		fmt.Fprint(w, ")")
+		w.Writef(")")
 	case *spark.FieldTypePtr:
 		g.generateFieldType(w, t.BaseType)
-		fmt.Fprint(w, ".nullable()")
+		w.Writef(".nullable()")
 	default:
 		// TODO(patrik): Better error
 		panic("Unknown type")
 	}
 }
 
-func (g *TypescriptGenerator) generateField(w io.Writer, field *spark.ResolvedField) {
-	fmt.Fprint(w, field.Name, ": ")
+func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
+	w.Writef(field.Name, ": ")
 	g.generateFieldType(w, field.Type)
 
 	if field.OmitEmpty {
-		fmt.Fprint(w, ".optional()")
+		w.Writef(".optional()")
 	}
 
-	fmt.Fprintln(w, ",")
+	w.Writef(",\n")
 }
 
 func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
@@ -264,13 +258,13 @@ func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
 // 	return nil
 // }
 
-func (g *TypescriptGenerator) generateClientCode(w io.Writer, serverDef *spark.ServerDef) error {
-	cw := spark.NewCodeWriter(w, indent)
+func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark.ServerDef) error {
+	w := spark.NewCodeWriter(out, indent)
 
-	cw.Writef("import { z } from \"zod\";\n")
-	cw.Writef("import * as api from \"./types\";\n")
-	cw.Writef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
-	cw.Writef("\n")
+	w.Writef("import { z } from \"zod\";\n")
+	w.Writef("import * as api from \"./types\";\n")
+	w.Writef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
+	w.Writef("\n")
 
 	// TODO(patrik): Add back
 	// for _, endpoint := range serverDef.Endpoints {
@@ -278,25 +272,25 @@ func (g *TypescriptGenerator) generateClientCode(w io.Writer, serverDef *spark.S
 	// 	cw.IndentWritef("export const %s = \"%s\"\n", name, endpoint.Path)
 	// }
 
-	cw.Writef("\n")
+	w.Writef("\n")
 
-	cw.IndentWritef("export class ApiClient extends BaseApiClient {\n")
-	cw.Indent()
+	w.IndentWritef("export class ApiClient extends BaseApiClient {\n")
+	w.Indent()
 
-	cw.IndentWritef("constructor(baseUrl: string) {\n")
+	w.IndentWritef("constructor(baseUrl: string) {\n")
 
-	cw.Indent()
-	cw.IndentWritef("super(baseUrl);\n")
-	cw.Unindent()
+	w.Indent()
+	w.IndentWritef("super(baseUrl);\n")
+	w.Unindent()
 
-	cw.IndentWritef("}\n")
+	w.IndentWritef("}\n")
 
 	for _, endpoint := range serverDef.Endpoints {
-		cw.IndentWritef("\n")
+		w.IndentWritef("\n")
 
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
-			err := generateApiEndpoint(&cw, &endpoint)
+			err := generateApiEndpoint(&w, &endpoint)
 			if err != nil {
 				return err
 			}
@@ -314,8 +308,8 @@ func (g *TypescriptGenerator) generateClientCode(w io.Writer, serverDef *spark.S
 
 	// TODO(patrik): Add normal endpoints with just normal fetch calls
 
-	cw.Unindent()
-	cw.IndentWritef("}\n")
+	w.Unindent()
+	w.IndentWritef("}\n")
 
 	return nil
 }
