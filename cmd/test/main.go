@@ -16,7 +16,7 @@ import (
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spark"
-	"github.com/nanoteck137/pyrin/spark/golang"
+	"github.com/nanoteck137/pyrin/spark/dart"
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
@@ -185,9 +185,7 @@ func main() {
 
 		pretty.Println(serverDef)
 
-		gen := golang.GolangGenerator{
-			Logger: logger,
-		}
+		gen := dart.DartGenerator{}
 
 		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
 		if err != nil {
