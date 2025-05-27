@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -16,6 +15,8 @@ import (
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/ember"
+	"github.com/nanoteck137/pyrin/spark"
+	"github.com/nanoteck137/pyrin/spark/typescript"
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
@@ -25,8 +26,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+var logger = trail.NewLogger(&trail.Options{Debug: true, Level: slog.LevelInfo})
+
 type TestBody struct {
-	Username        string `json:"username"`
+	Username        *string `json:"username,omitempty"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
 }
@@ -34,7 +37,7 @@ type TestBody struct {
 var usernameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
 
 func (b *TestBody) Transform() {
-	b.Username = strings.TrimSpace(b.Username)
+	*b.Username = strings.TrimSpace(*b.Username)
 }
 
 func (b TestBody) Validate() error {
@@ -154,21 +157,48 @@ func registerRoutes(router pyrin.Router) {
 	})
 }
 
+type TestLel struct {
+	Lel  *string `json:"lel,omitempty"`
+	Test float32 `json:"test"`
+}
+
+type Testing struct {
+	TestLel
+
+	Lel int `json:"lel"`
+}
+
+func test(registry *spark.StructRegistry) error {
+	return registry.Register(TestLel{})
+}
+
 func main() {
-	logger := trail.NewLogger(&trail.Options{
-		Debug: false,
-		Level: slog.LevelError,
-		// Out:   os.Stderr,
-	})
 
-	slog.SetDefault(logger.Logger)
+	{
+		router := spark.Router{}
+		registerRoutes(&router)
 
-	logger.Debug("DEBUG")
-	logger.Info("INFO")
-	logger.Warn("WARN")
-	logger.Error("ERROR")
+		serverDef, err := spark.CreateServerDef(&router)
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
 
-	logger.Fatal("Test")
+		pretty.Println(serverDef)
+
+		gen := typescript.TypescriptGenerator{
+			Logger: logger,
+		}
+
+		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
+
+		err = gen.Generate(&serverDef, resolver, "./work/typescript")
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
+	}
 
 	return
 	// err := os.Remove("./work/test.db")
@@ -180,7 +210,7 @@ func main() {
 	dbUrl := fmt.Sprintf("file:%s?_foreign_keys=true", dbFile)
 	db, err := ember.OpenDatabase("sqlite3", dbUrl)
 	if err != nil {
-		log.Fatal("err", err)
+		logger.Fatal("failed", "err", err)
 	}
 
 	migrations := []ember.Migration{
@@ -252,12 +282,12 @@ func main() {
 
 	err = ember.SetupMigrations(ctx, db)
 	if err != nil {
-		log.Fatal("err", err)
+		logger.Fatal("failed", "err", err)
 	}
 
 	err = ember.ApplyMigrations(ctx, db, migrations)
 	if err != nil {
-		log.Fatal("err", err)
+		logger.Fatal("failed", "err", err)
 	}
 
 	return
@@ -270,19 +300,19 @@ func main() {
 
 	s, err := spec.GenerateSpec(router.Routes)
 	if err != nil {
-		log.Fatal("Failed to generate spec", "err", err)
+		logger.Fatal("Failed to generate spec", "err", err)
 	}
 
 	d, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		log.Fatal("Failed to marshal server", "err", err)
+		logger.Fatal("Failed to marshal server", "err", err)
 	}
 
 	fmt.Printf("string(d): %v\n", string(d))
 
 	err = gen.GenerateTypescript(s, "./work/ts")
 	if err != nil {
-		log.Fatal("Failed", "err", err)
+		logger.Fatal("Failed", "err", err)
 	}
 
 	_ = server
@@ -290,4 +320,8 @@ func main() {
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
+}
+
+func init() {
+	slog.SetDefault(logger.Logger)
 }

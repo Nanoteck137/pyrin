@@ -3,9 +3,32 @@ package utils
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/nanoteck137/pyrin/tools/resolve"
 )
+
+func ReplacePathArgs(path, before, after string) (string, []string) {
+	var args []string
+	parts := strings.Split(path, "/")
+
+	for i, p := range parts {
+		if len(p) == 0 {
+			continue
+		}
+
+		if p[0] == ':' {
+			name := p[1:]
+			args = append(args, name)
+
+			parts[i] = before + name + after
+		}
+	}
+
+	newPath := strings.Join(parts, "/")
+
+	return newPath, args
+}
 
 func TypeToString(ty resolve.Type) (string, error) {
 	switch ty := ty.(type) {
