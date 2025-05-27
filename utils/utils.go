@@ -8,7 +8,9 @@ import (
 	"github.com/nanoteck137/pyrin/tools/resolve"
 )
 
-func ReplacePathArgs(path, before, after string) (string, []string) {
+type ReplacementFunc func(name string) string
+
+func ReplacePathArgs(path string, replacementFunc ReplacementFunc) (string, []string) {
 	var args []string
 	parts := strings.Split(path, "/")
 
@@ -21,7 +23,7 @@ func ReplacePathArgs(path, before, after string) (string, []string) {
 			name := p[1:]
 			args = append(args, name)
 
-			parts[i] = before + name + after
+			parts[i] = replacementFunc(name)
 		}
 	}
 
