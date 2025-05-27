@@ -16,7 +16,7 @@ import (
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spark"
-	"github.com/nanoteck137/pyrin/spark/typescript"
+	"github.com/nanoteck137/pyrin/spark/golang"
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
@@ -185,7 +185,7 @@ func main() {
 
 		pretty.Println(serverDef)
 
-		gen := typescript.TypescriptGenerator{
+		gen := golang.GolangGenerator{
 			Logger: logger,
 		}
 
