@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -19,8 +18,6 @@ import (
 	"github.com/nanoteck137/pyrin/spark/dart"
 	"github.com/nanoteck137/pyrin/spark/golang"
 	"github.com/nanoteck137/pyrin/spark/typescript"
-	"github.com/nanoteck137/pyrin/spec"
-	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
 	"github.com/nanoteck137/pyrin/trail"
 	"github.com/nanoteck137/validate"
@@ -31,15 +28,15 @@ import (
 var logger = trail.NewLogger(&trail.Options{Debug: true, Level: slog.LevelInfo})
 
 type TestBody struct {
-	Username        *string `json:"username,omitempty"`
-	Password        string  `json:"password"`
-	ConfirmPassword string  `json:"confirmPassword"`
+	Username        string `json:"username,omitempty"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirmPassword"`
 }
 
 var usernameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
 
 func (b *TestBody) Transform() {
-	*b.Username = strings.TrimSpace(*b.Username)
+	b.Username = strings.TrimSpace(b.Username)
 }
 
 func (b TestBody) Validate() error {
@@ -98,6 +95,8 @@ func registerRoutes(router pyrin.Router) {
 		BodyType: TestBody{},
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			id := c.Param("id")
+
+			pretty.Println(c.Request().Header)
 
 			body, err := pyrin.Body[TestBody](c)
 			if err != nil {
@@ -224,7 +223,7 @@ func main() {
 				},
 			}
 
-			err = gen.Generate(&serverDef, resolver, "./work/golang")
+			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/golang/api")
 			if err != nil {
 				logger.Fatal("failed", "err", err)
 			}
@@ -245,27 +244,28 @@ func main() {
 		}
 	}
 
-	return
+	// return
 	// err := os.Remove("./work/test.db")
 	// if err != nil {
 	// 	fmt.Println("err:", err)
 	// }
 
-	dbFile := "./work/test.db"
-	dbUrl := fmt.Sprintf("file:%s?_foreign_keys=true", dbFile)
-	db, err := ember.OpenDatabase("sqlite3", dbUrl)
-	if err != nil {
-		logger.Fatal("failed", "err", err)
-	}
+	if false {
+		dbFile := "./work/test.db"
+		dbUrl := fmt.Sprintf("file:%s?_foreign_keys=true", dbFile)
+		db, err := ember.OpenDatabase("sqlite3", dbUrl)
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
 
-	migrations := []ember.Migration{
-		{
-			Title:   "init",
-			Version: 1,
-			Done:    false,
-			Up: func(ctx context.Context, db ember.DB) error {
-				_, err = db.Exec(ctx, ember.RawQuery{
-					Sql: `
+		migrations := []ember.Migration{
+			{
+				Title:   "init",
+				Version: 1,
+				Done:    false,
+				Up: func(ctx context.Context, db ember.DB) error {
+					_, err = db.Exec(ctx, ember.RawQuery{
+						Sql: `
 					CREATE TABLE tracks(
 						id TEXT PRIMARY KEY,
 
@@ -274,97 +274,97 @@ func main() {
 						aritst_name TEXT NOT NULL
 					);
 					`,
-					Params: []any{},
-				})
-				if err != nil {
-					return err
-				}
+						Params: []any{},
+					})
+					if err != nil {
+						return err
+					}
 
-				return nil
-			},
-			Down: func(ctx context.Context, db ember.DB) error {
-				_, err = db.Exec(ctx, ember.RawQuery{
-					Sql: `
+					return nil
+				},
+				Down: func(ctx context.Context, db ember.DB) error {
+					_, err = db.Exec(ctx, ember.RawQuery{
+						Sql: `
 					DROP TABLE tracks;
 					`,
-					Params: []any{},
-				})
-				if err != nil {
-					return err
-				}
+						Params: []any{},
+					})
+					if err != nil {
+						return err
+					}
 
-				return nil
+					return nil
+				},
 			},
-		},
-		{
-			Title:   "test",
-			Version: 3,
-			Done:    false,
-			Up:      nil,
-			Down:    nil,
-		},
-		{
-			Title:   "test",
-			Version: 2,
-			Done:    false,
-			Up:      nil,
-			Down:    nil,
-		},
-		{
-			Title:   "test",
-			Version: 4,
-			Done:    false,
-			Up:      nil,
-			Down:    nil,
-		},
+			{
+				Title:   "test",
+				Version: 3,
+				Done:    false,
+				Up:      nil,
+				Down:    nil,
+			},
+			{
+				Title:   "test",
+				Version: 2,
+				Done:    false,
+				Up:      nil,
+				Down:    nil,
+			},
+			{
+				Title:   "test",
+				Version: 4,
+				Done:    false,
+				Up:      nil,
+				Down:    nil,
+			},
+		}
+
+		sort.SliceStable(migrations, func(i, j int) bool {
+			return migrations[i].Version < migrations[j].Version
+		})
+
+		ctx := context.Background()
+
+		err = ember.SetupMigrations(ctx, db)
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
+
+		err = ember.ApplyMigrations(ctx, db, migrations)
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
 	}
 
-	sort.SliceStable(migrations, func(i, j int) bool {
-		return migrations[i].Version < migrations[j].Version
-	})
-
-	ctx := context.Background()
-
-	err = ember.SetupMigrations(ctx, db)
-	if err != nil {
-		logger.Fatal("failed", "err", err)
-	}
-
-	err = ember.ApplyMigrations(ctx, db, migrations)
-	if err != nil {
-		logger.Fatal("failed", "err", err)
-	}
-
-	return
 	server := pyrin.NewServer(&pyrin.ServerConfig{
 		RegisterHandlers: registerRoutes,
 	})
 
-	router := spec.Router{}
-	registerRoutes(&router)
-
-	s, err := spec.GenerateSpec(router.Routes)
-	if err != nil {
-		logger.Fatal("Failed to generate spec", "err", err)
-	}
-
-	d, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		logger.Fatal("Failed to marshal server", "err", err)
-	}
-
-	fmt.Printf("string(d): %v\n", string(d))
-
-	err = gen.GenerateTypescript(s, "./work/ts")
-	if err != nil {
-		logger.Fatal("Failed", "err", err)
-	}
-
-	_ = server
-	// err = server.Start(":1337")
+	// router := spec.Router{}
+	// registerRoutes(&router)
+	//
+	// s, err := spec.GenerateSpec(router.Routes)
 	// if err != nil {
-	// 	log.Fatal(err)
+	// 	logger.Fatal("Failed to generate spec", "err", err)
 	// }
+	//
+	// d, err := json.MarshalIndent(s, "", "  ")
+	// if err != nil {
+	// 	logger.Fatal("Failed to marshal server", "err", err)
+	// }
+	//
+	// fmt.Printf("string(d): %v\n", string(d))
+	//
+	// err = gen.GenerateTypescript(s, "./work/ts")
+	// if err != nil {
+	// 	logger.Fatal("Failed", "err", err)
+	// }
+	//
+	// _ = server
+	err := server.Start(":1337")
+	if err != nil {
+		logger.Fatal("failed", "err", err)
+	}
 }
 
 func init() {
