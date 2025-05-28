@@ -68,9 +68,9 @@ func NewResolver() *Resolver {
 }
 
 var intType = &FieldTypeInt{}
-var floatType = &FieldTypeInt{}
-var stringType = &FieldTypeInt{}
-var boolType = &FieldTypeInt{}
+var floatType = &FieldTypeFloat{}
+var stringType = &FieldTypeString{}
+var boolType = &FieldTypeBoolean{}
 
 func (resolver *Resolver) resolveTypespecBase(typespec Typespec, isFromPointer bool) (FieldType, error) {
 	switch t := typespec.(type) {
