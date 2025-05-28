@@ -20,7 +20,9 @@ var baseClientSource string
 
 var _ spark.Generator = (*DartGenerator)(nil)
 
-type DartGenerator struct{}
+type DartGenerator struct {
+	NameMapping map[string]string
+}
 
 func (g *DartGenerator) Generate(serverDef *spark.ServerDef, resolver *spark.Resolver, outputDir string) error {
 	buf := &bytes.Buffer{}
@@ -56,6 +58,18 @@ func (g *DartGenerator) Generate(serverDef *spark.ServerDef, resolver *spark.Res
 	return nil
 }
 
+func (g *DartGenerator) mapName(name string) string {
+	if g.NameMapping == nil || name == "" {
+		return name
+	}
+
+	if newName, exists := g.NameMapping[name]; exists {
+		return newName
+	}
+
+	return name
+}
+
 func (g *DartGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spark.Resolver) error {
 	w := spark.NewCodeWriter(out, indent)
 
@@ -85,26 +99,17 @@ func (g *DartGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spar
 func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
 	w.IndentWritef("@JsonSerializable()\n")
 	w.IndentWritef("class %s {\n", rs.Name)
+	w.Indent()
 
 	for _, field := range rs.Fields {
-		name := field.Name
-
-		w.IndentWritef("  @JsonKey(name: \"%s\")\n", field.Name)
-		w.IndentWritef("  final ")
-		g.generateFieldType(w, field.Type)
-		// GenerateType(w, f.Type)
-
-		if field.OmitEmpty && !isPointer(field.Type) {
-			w.Writef("?")
-		}
-		w.Writef(" %s;\n", name)
+		g.generateField(w, &field)
 	}
 
 	w.Writef("\n")
 
 	w.Writef("  %s({", rs.Name)
 	for i, f := range rs.Fields {
-		name := f.Name
+		name := g.mapName(f.Name)
 
 		if i != 0 {
 			w.Writef(", ")
@@ -124,6 +129,7 @@ func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedSt
 	w.Writef("  factory %s.fromJson(Map<String, dynamic> json) => _$%sFromJson(json);\n", rs.Name, rs.Name)
 	w.Writef("  Map<String, dynamic> toJson() => _$%sToJson(this);\n", rs.Name)
 
+	w.Unindent()
 	w.Writef("}\n")
 	w.Writef("\n")
 
@@ -152,37 +158,39 @@ func (g *DartGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldTyp
 }
 
 func (g *DartGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	w.Writef(field.Name, ": ")
+	jsonName := field.Name
+	name := g.mapName(field.Name)
+
+	w.IndentWritef("@JsonKey(name: \"%s\")\n", jsonName)
+	w.IndentWritef("final ")
 	g.generateFieldType(w, field.Type)
 
-	if field.OmitEmpty {
-		w.Writef(".optional()")
+	if field.OmitEmpty && !isPointer(field.Type) {
+		w.Writef("?")
 	}
-
-	w.Writef(",\n")
+	w.Writef(" %s;\n", name)
 }
 
-func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
-	resType := e.Response
-	hasBody := resType != ""
-
-	if !hasBody {
-		resType = "NoBody"
-	}
-
-	funcName := strcase.ToLowerCamel(e.Name)
-
-	newPath, args := utils.ReplacePathArgs(e.Path, nil, func(name string) string {
+func (g *DartGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
 		return "$" + name
 	})
 
-	w.IndentWritef("AsyncResultDart<%s, ApiError> %s(", resType, funcName)
+	name := g.mapName(strcase.ToLowerCamel(e.Name))
+	response := g.mapName(e.Response)
+	body := g.mapName(e.Body)
+
+	if response == "" {
+		response = "NoBody"
+	}
+
+	w.IndentWritef("AsyncResultDart<%s, ApiError> %s(", response, name)
 	for _, arg := range args {
 		w.Writef("String %s, ", arg)
 	}
 
-	if e.Body != "" {
-		w.Writef("%s body, ", e.Body)
+	if body != "" {
+		w.Writef("%s body, ", body)
 	}
 
 	w.Writef("{")
@@ -199,8 +207,8 @@ func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
 	}
 	w.Writef(");\n")
 
-	if hasBody {
-		w.IndentWritef("return res.map((success) => %s.fromJson(success));\n", resType)
+	if response != "" {
+		w.IndentWritef("return res.map((success) => %s.fromJson(success));\n", response)
 	} else {
 		w.IndentWritef("return res.map((success) => NoBody());\n")
 	}
@@ -297,7 +305,7 @@ func (g *DartGenerator) generateClientCode(out io.Writer, serverDef *spark.Serve
 
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
-			err := generateApiEndpoint(&w, &endpoint)
+			err := g.generateApiEndpoint(&w, &endpoint)
 			if err != nil {
 				return err
 			}

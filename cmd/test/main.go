@@ -231,7 +231,12 @@ func main() {
 		}
 
 		{
-			gen := dart.DartGenerator{}
+			gen := dart.DartGenerator{
+				NameMapping: map[string]string{
+					"TestBody": "LelBody",
+					"id":       "bid",
+				},
+			}
 
 			err = gen.Generate(&serverDef, resolver, "./work/dart")
 			if err != nil {
