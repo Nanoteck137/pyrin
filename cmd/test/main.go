@@ -16,6 +16,8 @@ import (
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spark"
+	"github.com/nanoteck137/pyrin/spark/dart"
+	"github.com/nanoteck137/pyrin/spark/golang"
 	"github.com/nanoteck137/pyrin/spark/typescript"
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
@@ -57,6 +59,7 @@ func (b TestBody) Validate() error {
 }
 
 type Test2Body struct {
+	Id       string `json:"id"`
 	Name     string `json:"name"`
 	LastName string `json:"lastName"`
 	Age      int    `json:"age"`
@@ -186,21 +189,54 @@ func main() {
 
 		pretty.Println(serverDef)
 
-		gen := typescript.TypescriptGenerator{
-			NameMapping: map[string]string{
-				"TestBody": "LelBody",
-				"id":       "bid",
-			},
-		}
-
 		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
 		if err != nil {
 			logger.Fatal("failed", "err", err)
 		}
 
-		err = gen.Generate(&serverDef, resolver, "./work/typescript")
-		if err != nil {
-			logger.Fatal("failed", "err", err)
+		os.RemoveAll("./work/typescript")
+		os.RemoveAll("./work/golang")
+		os.RemoveAll("./work/dart")
+
+		os.Mkdir("./work/typescript", 0755)
+		os.Mkdir("./work/golang", 0755)
+		os.Mkdir("./work/dart", 0755)
+
+		{
+			gen := typescript.TypescriptGenerator{
+				NameMapping: map[string]string{
+					"TestBody": "LelBody",
+					"id":       "bid",
+				},
+			}
+
+			err = gen.Generate(&serverDef, resolver, "./work/typescript")
+			if err != nil {
+				logger.Fatal("failed", "err", err)
+			}
+		}
+
+		{
+			gen := golang.GolangGenerator{
+				NameMapping: map[string]string{
+					"TestBody": "LelBody",
+					"id":       "bid",
+				},
+			}
+
+			err = gen.Generate(&serverDef, resolver, "./work/golang")
+			if err != nil {
+				logger.Fatal("failed", "err", err)
+			}
+		}
+
+		{
+			gen := dart.DartGenerator{}
+
+			err = gen.Generate(&serverDef, resolver, "./work/dart")
+			if err != nil {
+				logger.Fatal("failed", "err", err)
+			}
 		}
 	}
 
