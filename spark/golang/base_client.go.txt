@@ -17,16 +17,19 @@ type Client struct {
 
 func New(addr string) *Client {
 	return &Client{
-		addr: addr,
+		Headers: map[string][]string{},
+		addr:    addr,
 	}
 }
 
 type Options struct {
-	QueryParams map[string]string
-	Boundary    string
+	Query  url.Values
+	Header http.Header
+
+	Boundary string
 }
 
-func createUrl(addr, path string, query map[string]string) (string, error) {
+func createUrl(addr, path string, query url.Values) (string, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return "", err
@@ -36,7 +39,7 @@ func createUrl(addr, path string, query map[string]string) (string, error) {
 
 	params := u.Query()
 	for k, v := range query {
-		params.Set(k, v)
+		params[k] = v
 	}
 	u.RawQuery = params.Encode()
 
@@ -64,8 +67,9 @@ type RequestData struct {
 	Url    string
 	Method string
 
-	Headers http.Header
-	Body    any
+	ClientHeaders http.Header
+	Headers       http.Header
+	Body          any
 }
 
 func rawRequest(
@@ -78,8 +82,12 @@ func rawRequest(
 		return nil, err
 	}
 
-	newHeaders := data.Headers.Clone()
+	newHeaders := data.ClientHeaders.Clone()
 	newHeaders.Set("Content-Type", contentType)
+
+	for k, v := range data.Headers {
+		newHeaders[k] = v
+	}
 
 	req.Header = newHeaders
 

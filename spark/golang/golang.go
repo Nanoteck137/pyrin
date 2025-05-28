@@ -198,7 +198,7 @@ func (g *GolangGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endp
 		w.IndentWritef("path := \"%v\"\n", e.Path)
 	}
 
-	w.IndentWritef("url, err := createUrl(c.addr, path, options.QueryParams)\n")
+	w.IndentWritef("url, err := createUrl(c.addr, path, options.Query)\n")
 	w.IndentWritef("if err != nil {\n")
 	w.Indent()
 	w.IndentWritef("return nil, err\n")
@@ -212,7 +212,8 @@ func (g *GolangGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endp
 
 	w.IndentWritef("Url: url,\n")
 	w.IndentWritef("Method: \"%v\",\n", e.Method)
-	w.IndentWritef("Headers: c.Headers,\n")
+	w.IndentWritef("ClientHeaders: c.Headers,\n")
+	w.IndentWritef("Headers: options.Header,\n")
 	w.IndentWritef("Body: ")
 	if body != "" {
 		w.Writef("body")
