@@ -142,7 +142,10 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 }
 
 func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	name := g.mapName(field.Name)
+	// name := g.mapName(field.Name)
+	// NOTE(patrik): We can't map the name for zod schema because that would 
+	// screw up json key names, and zod don't have a way to rename object keys 
+	name := field.Name
 
 	w.Writef("%s: ", name)
 	g.generateFieldType(w, field.Type)
