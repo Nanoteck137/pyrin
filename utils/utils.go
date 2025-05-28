@@ -8,9 +8,10 @@ import (
 	"github.com/nanoteck137/pyrin/tools/resolve"
 )
 
+type NameMapping func(name string) string
 type ReplacementFunc func(name string) string
 
-func ReplacePathArgs(path string, replacementFunc ReplacementFunc) (string, []string) {
+func ReplacePathArgs(path string, nameMapping NameMapping, replacementFunc ReplacementFunc) (string, []string) {
 	var args []string
 	parts := strings.Split(path, "/")
 
@@ -21,6 +22,10 @@ func ReplacePathArgs(path string, replacementFunc ReplacementFunc) (string, []st
 
 		if p[0] == ':' {
 			name := p[1:]
+			if nameMapping != nil {
+				name = nameMapping(name)
+			}
+			
 			args = append(args, name)
 
 			parts[i] = replacementFunc(name)

@@ -148,7 +148,7 @@ func (g *GolangGenerator) generateField(w *spark.CodeWriter, field *spark.Resolv
 }
 
 func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
-	newPath, args := utils.ReplacePathArgs(e.Path, func(name string) string {
+	newPath, args := utils.ReplacePathArgs(e.Path, nil, func(name string) string {
 		return "%v"
 	})
 

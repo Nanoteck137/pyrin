@@ -172,7 +172,7 @@ func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
 
 	funcName := strcase.ToLowerCamel(e.Name)
 
-	newPath, args := utils.ReplacePathArgs(e.Path, func(name string) string {
+	newPath, args := utils.ReplacePathArgs(e.Path, nil, func(name string) string {
 		return "$" + name
 	})
 

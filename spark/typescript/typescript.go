@@ -20,7 +20,9 @@ var baseClientSource string
 
 var _ spark.Generator = (*TypescriptGenerator)(nil)
 
-type TypescriptGenerator struct{}
+type TypescriptGenerator struct {
+	NameMapping map[string]string
+}
 
 func (g *TypescriptGenerator) Generate(serverDef *spark.ServerDef, resolver *spark.Resolver, outputDir string) error {
 	buf := &bytes.Buffer{}
@@ -56,6 +58,18 @@ func (g *TypescriptGenerator) Generate(serverDef *spark.ServerDef, resolver *spa
 	return nil
 }
 
+func (g *TypescriptGenerator) mapName(name string) string {
+	if g.NameMapping == nil || name == "" {
+		return name
+	}
+
+	if newName, exists := g.NameMapping[name]; exists {
+		return newName
+	}
+
+	return name
+}
+
 func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spark.Resolver) error {
 	w := spark.NewCodeWriter(out, indent)
 
@@ -80,7 +94,9 @@ func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver
 }
 
 func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
-	err := w.Writef("export const %s = z.object({\n", rs.Name)
+	name := g.mapName(rs.Name)
+
+	err := w.Writef("export const %s = z.object({\n", name)
 	if err != nil {
 		return err
 	}
@@ -98,7 +114,7 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 
 	w.Writef("});\n")
 	w.Writef("\n")
-	w.Writef("export type %s = z.infer<typeof %s>;\n", rs.Name, rs.Name)
+	w.Writef("export type %s = z.infer<typeof %s>;\n", name, name)
 	w.Writef("\n")
 
 	return nil
@@ -126,7 +142,9 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 }
 
 func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	w.Writef(field.Name, ": ")
+	name := g.mapName(field.Name)
+
+	w.Writef("%s: ", name)
 	g.generateFieldType(w, field.Type)
 
 	if field.OmitEmpty {
@@ -136,21 +154,24 @@ func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.Re
 	w.Writef(",\n")
 }
 
-func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
-	newPath, args := utils.ReplacePathArgs(e.Path, func(name string) string {
+func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
 		return "${" + name + "}"
 	})
-	// TODO(patrik): Add processing to args
 
-	w.IndentWritef("%s", strcase.ToLowerCamel(e.Name))
+	name := g.mapName(strcase.ToLowerCamel(e.Name))
+	response := g.mapName(e.Response)
+	body := g.mapName(e.Body)
+
+	w.IndentWritef("%s", name)
 	w.Writef("(")
 
 	for _, arg := range args {
 		w.Writef("%s: string, ", arg)
 	}
 
-	if e.Body != "" {
-		w.Writef("body: api.%s, ", e.Body)
+	if body != "" {
+		w.Writef("body: api.%s, ", body)
 	}
 
 	w.Writef("options?: ExtraOptions")
@@ -169,8 +190,8 @@ func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
 
 	w.Writef(", \"%s\"", e.Method)
 
-	if e.Response != "" {
-		w.Writef(", api.%s", e.Response)
+	if response != "" {
+		w.Writef(", api.%s", response)
 	} else {
 		w.Writef(", z.undefined()")
 	}
@@ -266,12 +287,6 @@ func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark
 	w.Writef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
 	w.Writef("\n")
 
-	// TODO(patrik): Add back
-	// for _, endpoint := range serverDef.Endpoints {
-	// 	name := strcase.ToScreamingSnake(endpoint.Name) + "_URL"
-	// 	cw.IndentWritef("export const %s = \"%s\"\n", name, endpoint.Path)
-	// }
-
 	w.Writef("\n")
 
 	w.IndentWritef("export class ApiClient extends BaseApiClient {\n")
@@ -290,7 +305,7 @@ func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark
 
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
-			err := generateApiEndpoint(&w, &endpoint)
+			err := g.generateApiEndpoint(&w, &endpoint)
 			if err != nil {
 				return err
 			}

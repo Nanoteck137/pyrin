@@ -16,7 +16,7 @@ import (
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spark"
-	"github.com/nanoteck137/pyrin/spark/dart"
+	"github.com/nanoteck137/pyrin/spark/typescript"
 	"github.com/nanoteck137/pyrin/spec"
 	"github.com/nanoteck137/pyrin/tools/gen"
 	"github.com/nanoteck137/pyrin/tools/transform"
@@ -30,8 +30,8 @@ var logger = trail.NewLogger(&trail.Options{Debug: true, Level: slog.LevelInfo})
 
 type TestBody struct {
 	Username        *string `json:"username,omitempty"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirmPassword"`
+	Password        string  `json:"password"`
+	ConfirmPassword string  `json:"confirmPassword"`
 }
 
 var usernameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
@@ -158,6 +158,7 @@ func registerRoutes(router pyrin.Router) {
 }
 
 type TestLel struct {
+	Id   string  `json:"id"`
 	Lel  *string `json:"lel,omitempty"`
 	Test float32 `json:"test"`
 }
@@ -185,7 +186,12 @@ func main() {
 
 		pretty.Println(serverDef)
 
-		gen := dart.DartGenerator{}
+		gen := typescript.TypescriptGenerator{
+			NameMapping: map[string]string{
+				"TestBody": "LelBody",
+				"id":       "bid",
+			},
+		}
 
 		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
 		if err != nil {
