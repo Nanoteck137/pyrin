@@ -22,7 +22,9 @@ var baseClientSource string
 
 var _ spark.Generator = (*GolangGenerator)(nil)
 
-type GolangGenerator struct{}
+type GolangGenerator struct{
+	NameMapping map[string]string
+}
 
 func (g *GolangGenerator) Generate(serverDef *spark.ServerDef, resolver *spark.Resolver, outputDir string) error {
 	buf := &bytes.Buffer{}
@@ -58,6 +60,18 @@ func (g *GolangGenerator) Generate(serverDef *spark.ServerDef, resolver *spark.R
 	return nil
 }
 
+func (g *GolangGenerator) mapName(name string) string {
+	if g.NameMapping == nil || name == "" {
+		return name
+	}
+
+	if newName, exists := g.NameMapping[name]; exists {
+		return newName
+	}
+
+	return name
+}
+
 func (g *GolangGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spark.Resolver) error {
 	w := spark.NewCodeWriter(out, indent)
 
@@ -82,7 +96,9 @@ func (g *GolangGenerator) generateTypeDefinitionCode(out io.Writer, resolver *sp
 }
 
 func (g *GolangGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
-	w.IndentWritef("type %s struct {\n", rs.Name)
+	name := g.mapName(rs.Name)
+
+	w.IndentWritef("type %s struct {\n", name)
 
 	w.Indent()
 	for _, field := range rs.Fields {
@@ -95,13 +111,9 @@ func (g *GolangGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Resolved
 	}
 	w.Unindent()
 
+	// TODO(patrik): Replace with f.Writef
 	fmt.Fprintln(w, "}")
 	fmt.Fprintln(w)
-
-	// w.Writef("});\n")
-	// w.Writef("\n")
-	// w.Writef("export type %s = z.infer<typeof %s>;\n", rs.Name, rs.Name)
-	// w.Writef("\n")
 
 	return nil
 }
@@ -128,7 +140,7 @@ func (g *GolangGenerator) generateFieldType(w io.Writer, ty spark.FieldType) {
 
 func (g *GolangGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
 	jsonName := field.Name
-	name := strcase.ToCamel(field.Name)
+	name := g.mapName(strcase.ToCamel(field.Name))
 
 	_, isPointer := field.Type.(*spark.FieldTypePtr)
 
@@ -147,14 +159,17 @@ func (g *GolangGenerator) generateField(w *spark.CodeWriter, field *spark.Resolv
 	w.Writef("\n")
 }
 
-func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
-	newPath, args := utils.ReplacePathArgs(e.Path, nil, func(name string) string {
+func (g *GolangGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
 		return "%v"
 	})
 
-	resType := e.Response
-	if resType == "" {
-		resType = "any"
+	name := g.mapName(e.Name)
+	response := g.mapName(e.Response)
+	body := g.mapName(e.Body)
+
+	if response == "" {
+		response = "any"
 	}
 
 	b := strings.Builder{}
@@ -163,13 +178,13 @@ func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
 		fmt.Fprintf(&b, "%s string, ", v)
 	}
 
-	if e.Body != "" {
-		fmt.Fprintf(&b, "body %s, ", e.Body)
+	if body != "" {
+		fmt.Fprintf(&b, "body %s, ", body)
 	}
 
 	fmt.Fprintf(&b, "options Options")
 
-	w.IndentWritef("func (c *Client) %v(%s) (*%s, error) {\n", e.Name, b.String(), resType)
+	w.IndentWritef("func (c *Client) %v(%s) (*%s, error) {\n", name, b.String(), response)
 	w.Indent()
 
 	if len(args) > 0 {
@@ -200,17 +215,18 @@ func generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
 	w.IndentWritef("AuthToken: c.authToken,\n")
 	w.IndentWritef("ApiToken: c.apiToken,\n")
 
-	body := "nil"
-	if e.Body != "" {
-		body = "body"
+	w.IndentWritef("Body: ")
+	if body != "" {
+		w.Writef("body")
+	} else {
+		w.Writef("nil")
 	}
-
-	w.IndentWritef("Body: %s,\n", body)
+	w.Writef(",\n")
 
 	w.Unindent()
 	w.IndentWritef("}\n")
 
-	w.IndentWritef("return Request[%s](data)\n", resType)
+	w.IndentWritef("return Request[%s](data)\n", response)
 
 	w.Unindent()
 	w.IndentWritef("}\n")
@@ -295,23 +311,12 @@ func (g *GolangGenerator) generateClientCode(w io.Writer, serverDef *spark.Serve
 
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
-			err := generateApiEndpoint(&cw, &endpoint)
+			err := g.generateApiEndpoint(&cw, &endpoint)
 			if err != nil {
 				return err
 			}
 		}
 	}
-
-	// for _, endpoint := range server.FormApiEndpoints {
-	// 	cw.IWritef("\n")
-	//
-	// 	err := generateFormApiEndpoint(&cw, &endpoint)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
-	// TODO(patrik): Add normal endpoints with just normal fetch calls
 
 	return nil
 }
