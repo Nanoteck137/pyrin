@@ -212,9 +212,7 @@ func (g *GolangGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endp
 
 	w.IndentWritef("Url: url,\n")
 	w.IndentWritef("Method: \"%v\",\n", e.Method)
-	w.IndentWritef("AuthToken: c.authToken,\n")
-	w.IndentWritef("ApiToken: c.apiToken,\n")
-
+	w.IndentWritef("Headers: c.Headers,\n")
 	w.IndentWritef("Body: ")
 	if body != "" {
 		w.Writef("body")

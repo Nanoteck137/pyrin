@@ -11,23 +11,14 @@ import (
 )
 
 type Client struct {
-	addr      string
-	authToken string
-	apiToken  string
+	Headers http.Header
+	addr    string
 }
 
 func New(addr string) *Client {
 	return &Client{
 		addr: addr,
 	}
-}
-
-func (c *Client) SetAuthToken(token string) {
-	c.authToken = token
-}
-
-func (c *Client) SetApiToken(token string) {
-	c.apiToken = token
 }
 
 type Options struct {
@@ -73,26 +64,24 @@ type RequestData struct {
 	Url    string
 	Method string
 
-	AuthToken string
-	ApiToken  string
-	Body      any
+	Headers http.Header
+	Body    any
 }
 
-func rawRequest(data *RequestData, contentType string, bodyReader io.Reader) (*http.Response, error) {
+func rawRequest(
+	data *RequestData,
+	contentType string,
+	bodyReader io.Reader,
+) (*http.Response, error) {
 	req, err := http.NewRequest(data.Method, data.Url, bodyReader)
 	if err != nil {
 		return nil, err
 	}
 
-	if data.AuthToken != "" {
-		req.Header.Add("Authorization", "Bearer "+data.AuthToken)
-	}
+	newHeaders := data.Headers.Clone()
+	newHeaders.Set("Content-Type", contentType)
 
-	if data.ApiToken != "" {
-		req.Header.Add("X-Api-Token", data.ApiToken)
-	}
-
-	req.Header.Set("Content-Type", contentType)
+	req.Header = newHeaders
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
