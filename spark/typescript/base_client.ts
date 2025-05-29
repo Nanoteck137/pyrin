@@ -92,7 +92,7 @@ export class BaseApiClient {
     return parsedData;
   }
 
-  async requestWithFormData<
+  async requestForm<
     DataSchema extends z.ZodTypeAny,
     ErrorExtraSchema extends z.ZodTypeAny,
   >(

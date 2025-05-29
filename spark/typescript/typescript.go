@@ -217,6 +217,60 @@ func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.
 	return nil
 }
 
+func (g *TypescriptGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
+		return "${" + name + "}"
+	})
+
+	name := g.mapName(strcase.ToLowerCamel(e.Name))
+	response := g.mapName(e.Response)
+	// body := g.mapName(e.Body)
+
+	w.IndentWritef("%s", name)
+	w.Writef("(")
+
+	for _, arg := range args {
+		w.Writef("%s: string, ", arg)
+	}
+
+	w.Writef("body: FormData, ")
+
+	w.Writef("options?: ExtraOptions")
+
+	w.Writef(") {\n")
+
+	w.Indent()
+
+	w.IndentWritef("return this.requestForm(")
+
+	if len(args) > 0 {
+		w.Writef("`%s`", newPath)
+	} else {
+		w.Writef("\"%s\"", newPath)
+	}
+
+	w.Writef(", \"%s\"", e.Method)
+
+	if response != "" {
+		w.Writef(", api.%s", response)
+	} else {
+		w.Writef(", z.undefined()")
+	}
+
+	w.Writef(", z.any()")
+
+	w.Writef(", body")
+
+	w.Writef(", options")
+
+	w.Writef(")\n")
+	w.Unindent()
+
+	w.IndentWritef("}\n")
+
+	return nil
+}
+
 // func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
 // 	var args []string
 // 	parts := strings.Split(e.Path, "/")
@@ -309,6 +363,11 @@ func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
 			err := g.generateApiEndpoint(&w, &endpoint)
+			if err != nil {
+				return err
+			}
+		case spark.EndpointTypeForm:
+			err := g.generateFormEndpoint(&w, &endpoint)
 			if err != nil {
 				return err
 			}
