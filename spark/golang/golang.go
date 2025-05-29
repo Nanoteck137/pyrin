@@ -214,24 +214,90 @@ func (g *GolangGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endp
 	w.IndentWritef("Method: \"%v\",\n", e.Method)
 	w.IndentWritef("ClientHeaders: c.Headers,\n")
 	w.IndentWritef("Headers: options.Header,\n")
-	w.IndentWritef("Body: ")
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	w.IndentWritef("return Request[%s](data, ", response)
 	if body != "" {
 		w.Writef("body")
 	} else {
 		w.Writef("nil")
 	}
-	w.Writef(",\n")
-
-	w.Unindent()
-	w.IndentWritef("}\n")
-
-	w.IndentWritef("return Request[%s](data)\n", response)
+	w.Writef(")\n")
 
 	w.Unindent()
 	w.IndentWritef("}\n")
 
 	return nil
 }
+
+func (g *GolangGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
+		return "%v"
+	})
+
+	name := g.mapName(e.Name)
+	response := g.mapName(e.Response)
+	// body := g.mapName(e.Body)
+
+	if response == "" {
+		response = "any"
+	}
+
+	b := strings.Builder{}
+
+	for _, v := range args {
+		fmt.Fprintf(&b, "%s string, ", v)
+	}
+
+	fmt.Fprintf(&b, "boundary string, ")
+	fmt.Fprintf(&b, "body Reader, ")
+
+	fmt.Fprintf(&b, "options Options")
+
+	w.IndentWritef("func (c *Client) %v(%s) (*%s, error) {\n", name, b.String(), response)
+	w.Indent()
+
+	if len(args) > 0 {
+		b := strings.Builder{}
+		for _, v := range args {
+			fmt.Fprintf(&b, ", %s", v)
+		}
+
+		w.IndentWritef("path := Sprintf(\"%v\"%s)\n", newPath, b.String())
+	} else {
+		w.IndentWritef("path := \"%v\"\n", e.Path)
+	}
+
+	w.IndentWritef("url, err := createUrl(c.addr, path, options.Query)\n")
+	w.IndentWritef("if err != nil {\n")
+	w.Indent()
+	w.IndentWritef("return nil, err\n")
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	w.Writef("\n")
+
+	w.IndentWritef("data := RequestData{\n")
+	w.Indent()
+
+	w.IndentWritef("Url: url,\n")
+	w.IndentWritef("Method: \"%v\",\n", e.Method)
+	w.IndentWritef("ClientHeaders: c.Headers,\n")
+	w.IndentWritef("Headers: options.Header,\n")
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	w.IndentWritef("return RequestForm[%s](data, boundary, body)\n", response)
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	return nil
+}
+
 
 // func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
 // 	var args []string
@@ -311,6 +377,11 @@ func (g *GolangGenerator) generateClientCode(w io.Writer, serverDef *spark.Serve
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
 			err := g.generateApiEndpoint(&cw, &endpoint)
+			if err != nil {
+				return err
+			}
+		case spark.EndpointTypeForm:
+			err := g.generateFormEndpoint(&cw, &endpoint)
 			if err != nil {
 				return err
 			}

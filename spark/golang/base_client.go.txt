@@ -69,7 +69,6 @@ type RequestData struct {
 
 	ClientHeaders http.Header
 	Headers       http.Header
-	Body          any
 }
 
 func rawRequest(
@@ -99,13 +98,13 @@ func rawRequest(
 	return resp, nil
 }
 
-func Request[D any](data RequestData) (*D, error) {
+func Request[D any](data RequestData, body any) (*D, error) {
 	var bodyReader io.Reader
 
-	if data.Body != nil {
+	if body != nil {
 		buf := bytes.Buffer{}
 
-		err := json.NewEncoder(&buf).Encode(data.Body)
+		err := json.NewEncoder(&buf).Encode(body)
 		if err != nil {
 			return nil, err
 		}
