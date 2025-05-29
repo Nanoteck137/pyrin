@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export function createApiResponse<
   Data extends z.ZodTypeAny,
-  ErrorExtra extends z.ZodTypeAny,
+  ErrorExtra extends z.ZodTypeAny
 >(data: Data, errorExtra: ErrorExtra) {
   return z.discriminatedUnion("success", [
     z.object({ success: z.literal(true), data }),
@@ -16,6 +16,10 @@ export function createApiResponse<
       }),
     }),
   ]);
+}
+
+export function createUrl(base: string, endpoint: string) {
+  return new URL(base + endpoint);
 }
 
 export type ExtraOptions = {
@@ -32,10 +36,6 @@ export class BaseApiClient {
     this.headers = new Map<string, string>();
   }
 
-  createEndpointUrl(endpoint: string) {
-    return new URL(this.baseUrl + endpoint);
-  }
-
   private getInitialHeaders() {
     const headers: Record<string, string> = {};
 
@@ -48,16 +48,16 @@ export class BaseApiClient {
 
   async request<
     DataSchema extends z.ZodTypeAny,
-    ErrorExtraSchema extends z.ZodTypeAny,
+    ErrorExtraSchema extends z.ZodTypeAny
   >(
     endpoint: string,
     method: string,
     dataSchema: DataSchema,
     errorExtraSchema: ErrorExtraSchema,
     body?: unknown,
-    extra?: ExtraOptions,
+    extra?: ExtraOptions
   ) {
-    const url = this.createEndpointUrl(endpoint);
+    const url = createUrl(this.baseUrl, endpoint);
     const headers = this.getInitialHeaders();
 
     if (body) {
@@ -94,16 +94,16 @@ export class BaseApiClient {
 
   async requestForm<
     DataSchema extends z.ZodTypeAny,
-    ErrorExtraSchema extends z.ZodTypeAny,
+    ErrorExtraSchema extends z.ZodTypeAny
   >(
     endpoint: string,
     method: string,
     dataSchema: DataSchema,
     errorExtraSchema: ErrorExtraSchema,
     body: FormData,
-    extra?: ExtraOptions,
+    extra?: ExtraOptions
   ) {
-    const url = this.createEndpointUrl(endpoint);
+    const url = createUrl(this.baseUrl, endpoint);
     const headers = this.getInitialHeaders();
 
     if (body) {

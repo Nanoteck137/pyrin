@@ -143,8 +143,8 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 
 func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
 	// name := g.mapName(field.Name)
-	// NOTE(patrik): We can't map the name for zod schema because that would 
-	// screw up json key names, and zod don't have a way to rename object keys 
+	// NOTE(patrik): We can't map the name for zod schema because that would
+	// screw up json key names, and zod don't have a way to rename object keys
 	name := field.Name
 
 	w.Writef("%s: ", name)
@@ -271,77 +271,50 @@ func (g *TypescriptGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark
 	return nil
 }
 
-// func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
-// 	var args []string
-// 	parts := strings.Split(e.Path, "/")
-// 	endpointHasArgs := false
-//
-// 	for i, p := range parts {
-// 		if len(p) == 0 {
-// 			continue
-// 		}
-//
-// 		if p[0] == ':' {
-// 			name := p[1:]
-// 			args = append(args, name)
-//
-// 			parts[i] = fmt.Sprintf("${%s}", name)
-//
-// 			endpointHasArgs = true
-// 		}
-// 	}
-//
-// 	newEndpoint := strings.Join(parts, "/")
-//
-// 	w.IWritef("%s(", strcase.ToLowerCamel(e.Name))
-//
-// 	for _, arg := range args {
-// 		w.Writef("%s: string, ", arg)
-// 	}
-//
-// 	w.Writef("formData: FormData, ")
-// 	w.Writef("options?: ExtraOptions")
-//
-// 	w.Writef(") {\n")
-//
-// 	w.Indent()
-//
-// 	w.IWritef("return this.requestWithFormData(")
-//
-// 	if endpointHasArgs {
-// 		w.Writef("`%s`", newEndpoint)
-// 	} else {
-// 		w.Writef("\"%s\"", newEndpoint)
-// 	}
-//
-// 	w.Writef(", \"%s\"", e.Method)
-//
-// 	if e.ResponseType != "" {
-// 		w.Writef(", api.%s", e.ResponseType)
-// 	} else {
-// 		w.Writef(", z.undefined()")
-// 	}
-//
-// 	w.Writef(", z.undefined()")
-//
-// 	w.Writef(", formData")
-//
-// 	w.Writef(", options")
-//
-// 	w.Writef(")\n")
-// 	w.Unindent()
-//
-// 	w.IWritef("}\n")
-//
-// 	return nil
-// }
+func (g *TypescriptGenerator) generateUrlForEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
+		return "${" + name + "}"
+	})
+
+	name := g.mapName(strcase.ToLowerCamel(e.Name))
+
+	w.IndentWritef("%s", name)
+	w.Writef("(")
+
+	for i, arg := range args {
+		if i > 0 {
+			w.Writef(", ")
+		}
+
+		w.Writef("%s: string", arg)
+	}
+
+	w.Writef(") {\n")
+
+	w.Indent()
+
+	w.IndentWritef("return createUrl(this.baseUrl, ")
+
+	if len(args) > 0 {
+		w.Writef("`%s`", newPath)
+	} else {
+		w.Writef("\"%s\"", newPath)
+	}
+
+	w.Writef(")\n")
+	w.Unindent()
+
+	w.IndentWritef("}\n")
+
+	return nil
+}
 
 func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark.ServerDef) error {
 	w := spark.NewCodeWriter(out, indent)
 
 	w.Writef("import { z } from \"zod\";\n")
 	w.Writef("import * as api from \"./types\";\n")
-	w.Writef("import { BaseApiClient, type ExtraOptions } from \"./base-client\";\n")
+	w.Writef("import { BaseApiClient, createUrl, type ExtraOptions } from \"./base-client\";\n")
 	w.Writef("\n")
 
 	w.Writef("\n")
@@ -349,10 +322,14 @@ func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark
 	w.IndentWritef("export class ApiClient extends BaseApiClient {\n")
 	w.Indent()
 
+	w.IndentWritef("url: ClientUrls;\n")
+	w.Writef("\n")
+
 	w.IndentWritef("constructor(baseUrl: string) {\n")
 
 	w.Indent()
 	w.IndentWritef("super(baseUrl);\n")
+	w.IndentWritef("this.url = new ClientUrls(baseUrl);\n")
 	w.Unindent()
 
 	w.IndentWritef("}\n")
@@ -374,19 +351,45 @@ func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark
 		}
 	}
 
-	// for _, endpoint := range server.FormApiEndpoints {
-	// 	cw.IWritef("\n")
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	// class ClientUrls {
+	//   baseUrl: string;
 	//
-	// 	err := generateFormApiEndpoint(&cw, &endpoint)
-	// 	if err != nil {
-	// 		return err
-	// 	}
+	//   constructor(baseUrl: string) {
+	//     this.baseUrl = baseUrl;
+	//   }
 	// }
 
-	// TODO(patrik): Add normal endpoints with just normal fetch calls
+	w.Writef("\n")
+
+	w.IndentWritef("export class ClientUrls {\n")
+	w.Indent()
+
+	w.IndentWritef("baseUrl: string;\n")
+	w.Writef("\n")
+
+	w.IndentWritef("constructor(baseUrl: string) {\n")
+
+	w.Indent()
+	w.IndentWritef("this.baseUrl = baseUrl;\n")
+	w.Unindent()
+
+	w.IndentWritef("}\n")
+
+	for _, endpoint := range serverDef.Endpoints {
+		w.IndentWritef("\n")
+
+		err := g.generateUrlForEndpoint(&w, &endpoint)
+		if err != nil {
+			return err
+		}
+	}
 
 	w.Unindent()
 	w.IndentWritef("}\n")
+	
 
 	return nil
 }
