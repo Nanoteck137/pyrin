@@ -209,7 +209,7 @@ func main() {
 				},
 			}
 
-			err = gen.Generate(&serverDef, resolver, "./work/typescript")
+			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/typescript/api")
 			if err != nil {
 				logger.Fatal("failed", "err", err)
 			}

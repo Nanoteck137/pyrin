@@ -25,18 +25,25 @@ export type ExtraOptions = {
 
 export class BaseApiClient {
   baseUrl: string;
-  token?: string;
+  headers: Map<string, string>;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-  }
-
-  setToken(token?: string) {
-    this.token = token;
+    this.headers = new Map<string, string>();
   }
 
   createEndpointUrl(endpoint: string) {
     return new URL(this.baseUrl + endpoint);
+  }
+
+  private getInitialHeaders() {
+    const headers: Record<string, string> = {};
+
+    this.headers.forEach((v, k) => {
+      headers[k] = v;
+    });
+
+    return headers;
   }
 
   async request<
@@ -50,16 +57,12 @@ export class BaseApiClient {
     body?: unknown,
     extra?: ExtraOptions,
   ) {
-    const headers: Record<string, string> = {};
-    if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
-    }
+    const url = this.createEndpointUrl(endpoint);
+    const headers = this.getInitialHeaders();
 
     if (body) {
       headers["Content-Type"] = "application/json";
     }
-
-    const url = new URL(this.baseUrl + endpoint);
 
     if (extra) {
       if (extra.headers) {
@@ -100,12 +103,12 @@ export class BaseApiClient {
     body: FormData,
     extra?: ExtraOptions,
   ) {
-    const headers: Record<string, string> = {};
-    if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
-    }
+    const url = this.createEndpointUrl(endpoint);
+    const headers = this.getInitialHeaders();
 
-    const url = new URL(this.baseUrl + endpoint);
+    if (body) {
+      headers["Content-Type"] = "multipart/form-data";
+    }
 
     if (extra) {
       if (extra.headers) {
