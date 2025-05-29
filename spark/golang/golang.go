@@ -307,8 +307,12 @@ func (g *GolangGenerator) generateUrlForEndpoint(w *spark.CodeWriter, e *spark.E
 
 	b := strings.Builder{}
 
-	for _, v := range args {
-		fmt.Fprintf(&b, "%s string, ", v)
+	for i, v := range args {
+		if i > 0 {
+			fmt.Fprintf(&b, ", ")
+		}
+
+		fmt.Fprintf(&b, "%s string", v)
 	}
 
 	w.IndentWritef("func (c *ClientUrls) %v(%s) (*URL, error) {\n", name, b.String())
