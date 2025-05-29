@@ -22,8 +22,12 @@ class RequestOptions {
   RequestOptions({this.query, this.headers});
 }
 
+String createUrl(String baseUrl, String path) {
+  return baseUrl + path;
+}
+
 class BaseApiClient {
-  BaseApiClient({String baseUrl = ""}) {
+  BaseApiClient({this.baseUrl = ""}) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -36,6 +40,7 @@ class BaseApiClient {
     headers = <String, String>{};
   }
 
+  String baseUrl;
   late Dio _dio;
   late Map<String, String> headers;
 

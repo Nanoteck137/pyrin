@@ -269,70 +269,34 @@ func (g *DartGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark.Endpo
 	return nil
 }
 
-// func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
-// 	var args []string
-// 	parts := strings.Split(e.Path, "/")
-// 	endpointHasArgs := false
-//
-// 	for i, p := range parts {
-// 		if len(p) == 0 {
-// 			continue
-// 		}
-//
-// 		if p[0] == ':' {
-// 			name := p[1:]
-// 			args = append(args, name)
-//
-// 			parts[i] = fmt.Sprintf("${%s}", name)
-//
-// 			endpointHasArgs = true
-// 		}
-// 	}
-//
-// 	newEndpoint := strings.Join(parts, "/")
-//
-// 	w.IWritef("%s(", strcase.ToLowerCamel(e.Name))
-//
-// 	for _, arg := range args {
-// 		w.Writef("%s: string, ", arg)
-// 	}
-//
-// 	w.Writef("formData: FormData, ")
-// 	w.Writef("options?: ExtraOptions")
-//
-// 	w.Writef(") {\n")
-//
-// 	w.Indent()
-//
-// 	w.IWritef("return this.requestWithFormData(")
-//
-// 	if endpointHasArgs {
-// 		w.Writef("`%s`", newEndpoint)
-// 	} else {
-// 		w.Writef("\"%s\"", newEndpoint)
-// 	}
-//
-// 	w.Writef(", \"%s\"", e.Method)
-//
-// 	if e.ResponseType != "" {
-// 		w.Writef(", api.%s", e.ResponseType)
-// 	} else {
-// 		w.Writef(", z.undefined()")
-// 	}
-//
-// 	w.Writef(", z.undefined()")
-//
-// 	w.Writef(", formData")
-//
-// 	w.Writef(", options")
-//
-// 	w.Writef(")\n")
-// 	w.Unindent()
-//
-// 	w.IWritef("}\n")
-//
-// 	return nil
-// }
+func (g *DartGenerator) generateUrlForEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
+		return "$" + name
+	})
+
+	name := g.mapName(strcase.ToLowerCamel(e.Name))
+
+	w.IndentWritef("String %s(", name)
+	for i, arg := range args {
+		if i > 0 {
+			w.Writef(", ")
+		}
+
+		w.Writef("String %s", arg)
+	}
+
+	w.Writef(") {\n")
+	w.Indent()
+
+	w.IndentWritef("return createUrl(baseUrl, ")
+	w.Writef("\"%s\"", newPath)
+	w.Writef(");\n")
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	return nil
+}
 
 func (g *DartGenerator) generateClientCode(out io.Writer, serverDef *spark.ServerDef) error {
 	w := spark.NewCodeWriter(out, indent)
@@ -348,7 +312,17 @@ func (g *DartGenerator) generateClientCode(out io.Writer, serverDef *spark.Serve
 	w.IndentWritef("class ApiClient extends BaseApiClient {\n")
 	w.Indent()
 
-	w.IndentWritef("ApiClient({super.baseUrl});\n")
+	w.IndentWritef("ApiClient({super.baseUrl}) {\n")
+	w.Indent()
+
+	w.IndentWritef("url = ClientUrls(baseUrl);\n")
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	w.Writef("\n")
+
+	w.IndentWritef("late ClientUrls url;")
 
 	for _, endpoint := range serverDef.Endpoints {
 		w.IndentWritef("\n")
@@ -364,6 +338,28 @@ func (g *DartGenerator) generateClientCode(out io.Writer, serverDef *spark.Serve
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	w.Writef("\n")
+
+	w.IndentWritef("class ClientUrls {\n")
+	w.Indent()
+
+	w.IndentWritef("ClientUrls(this.baseUrl);\n")
+	w.Writef("\n")
+
+	w.IndentWritef("String baseUrl;\n")
+
+	for _, endpoint := range serverDef.Endpoints {
+		w.IndentWritef("\n")
+
+		err := g.generateUrlForEndpoint(&w, &endpoint)
+		if err != nil {
+			return err
 		}
 	}
 
