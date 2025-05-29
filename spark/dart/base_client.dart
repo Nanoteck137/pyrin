@@ -14,9 +14,10 @@ class ApiError {
 class NoBody {}
 
 class RequestOptions {
+  Map<String, dynamic>? headers;
   Map<String, dynamic>? query;
 
-  RequestOptions({this.query});
+  RequestOptions({this.query, this.headers});
 }
 
 class BaseApiClient {
@@ -29,20 +30,12 @@ class BaseApiClient {
         },
       ),
     );
+
+    headers = <String, String>{};
   }
 
   late Dio _dio;
-
-  String? _accessToken;
-  String? _apiToken;
-
-  void setAccessToken(String? token) {
-    _accessToken = token;
-  }
-
-  void setApiToken(String? token) {
-    _apiToken = token;
-  }
+  late Map<String, String> headers;
 
   AsyncResultDart<Map<String, dynamic>, ApiError> request(
     String method,
@@ -50,14 +43,11 @@ class BaseApiClient {
     RequestOptions? options,
     Map<String, dynamic>? body,
   }) async {
-    final headers = <String, dynamic>{};
+    final headers = <String, dynamic>{...this.headers};
+    headers["Content-Type"] = "application/json";
 
-    if (_accessToken != null) {
-      headers["Authorization"] = "Bearer $_accessToken";
-    }
-
-    if (_apiToken != null) {
-      headers["X-Api-Token"] = _apiToken;
+    if (options?.headers != null) {
+      headers.addAll(options!.headers!);
     }
 
     final res = await _dio.request(

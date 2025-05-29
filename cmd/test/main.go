@@ -237,7 +237,7 @@ func main() {
 				},
 			}
 
-			err = gen.Generate(&serverDef, resolver, "./work/dart")
+			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/dart/lib/api")
 			if err != nil {
 				logger.Fatal("failed", "err", err)
 			}

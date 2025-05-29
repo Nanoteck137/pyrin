@@ -97,8 +97,10 @@ func (g *DartGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spar
 }
 
 func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
+	name := g.mapName(rs.Name)
+
 	w.IndentWritef("@JsonSerializable()\n")
-	w.IndentWritef("class %s {\n", rs.Name)
+	w.IndentWritef("class %s {\n", name)
 	w.Indent()
 
 	for _, field := range rs.Fields {
@@ -107,7 +109,7 @@ func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedSt
 
 	w.Writef("\n")
 
-	w.Writef("  %s({", rs.Name)
+	w.Writef("  %s({", name)
 	for i, f := range rs.Fields {
 		name := g.mapName(f.Name)
 
@@ -126,8 +128,8 @@ func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedSt
 
 	w.Writef("\n")
 
-	w.Writef("  factory %s.fromJson(Map<String, dynamic> json) => _$%sFromJson(json);\n", rs.Name, rs.Name)
-	w.Writef("  Map<String, dynamic> toJson() => _$%sToJson(this);\n", rs.Name)
+	w.Writef("  factory %s.fromJson(Map<String, dynamic> json) => _$%sFromJson(json);\n", name, name)
+	w.Writef("  Map<String, dynamic> toJson() => _$%sToJson(this);\n", name)
 
 	w.Unindent()
 	w.Writef("}\n")
@@ -207,7 +209,7 @@ func (g *DartGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoi
 	}
 	w.Writef(");\n")
 
-	if response != "" {
+	if response != "NoBody" {
 		w.IndentWritef("return res.map((success) => %s.fromJson(success));\n", response)
 	} else {
 		w.IndentWritef("return res.map((success) => NoBody());\n")
