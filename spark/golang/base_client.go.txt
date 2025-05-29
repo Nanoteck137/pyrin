@@ -10,13 +10,27 @@ import (
 	"strings"
 )
 
+type URL = url.URL
+
+type ClientUrls struct {
+	addr string
+}
+
+func (c *ClientUrls) getUrl(path string) (*url.URL, error) {
+	return createUrlBase(c.addr, path, nil)
+}
+
 type Client struct {
+	Url     ClientUrls
 	Headers http.Header
 	addr    string
 }
 
 func New(addr string) *Client {
 	return &Client{
+		Url: ClientUrls{
+			addr: addr,
+		},
 		Headers: map[string][]string{},
 		addr:    addr,
 	}
@@ -27,21 +41,32 @@ type Options struct {
 	Header http.Header
 }
 
-func createUrl(addr, path string, query url.Values) (string, error) {
+func createUrlBase(addr, path string, query url.Values) (*url.URL, error) {
 	u, err := url.Parse(addr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	u.Path = path
 
-	params := u.Query()
-	for k, v := range query {
-		params[k] = v
+	if query != nil {
+		params := u.Query()
+		for k, v := range query {
+			params[k] = v
+		}
+		u.RawQuery = params.Encode()
 	}
-	u.RawQuery = params.Encode()
 
-	return u.String(), nil
+	return u, nil
+}
+
+func createUrl(addr, path string, query url.Values) (string, error) {
+	url, err := createUrlBase(addr, path, query)
+	if err != nil {
+		return "", err
+	}
+
+	return url.String(), nil
 }
 
 type ApiError[E any] struct {

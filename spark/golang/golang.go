@@ -22,7 +22,7 @@ var baseClientSource string
 
 var _ spark.Generator = (*GolangGenerator)(nil)
 
-type GolangGenerator struct{
+type GolangGenerator struct {
 	NameMapping map[string]string
 }
 
@@ -298,71 +298,40 @@ func (g *GolangGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark.End
 	return nil
 }
 
+func (g *GolangGenerator) generateUrlForEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
+		return "%v"
+	})
 
-// func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
-// 	var args []string
-// 	parts := strings.Split(e.Path, "/")
-// 	endpointHasArgs := false
-//
-// 	for i, p := range parts {
-// 		if len(p) == 0 {
-// 			continue
-// 		}
-//
-// 		if p[0] == ':' {
-// 			name := p[1:]
-// 			args = append(args, name)
-//
-// 			parts[i] = fmt.Sprintf("${%s}", name)
-//
-// 			endpointHasArgs = true
-// 		}
-// 	}
-//
-// 	newEndpoint := strings.Join(parts, "/")
-//
-// 	w.IWritef("%s(", strcase.ToLowerCamel(e.Name))
-//
-// 	for _, arg := range args {
-// 		w.Writef("%s: string, ", arg)
-// 	}
-//
-// 	w.Writef("formData: FormData, ")
-// 	w.Writef("options?: ExtraOptions")
-//
-// 	w.Writef(") {\n")
-//
-// 	w.Indent()
-//
-// 	w.IWritef("return this.requestWithFormData(")
-//
-// 	if endpointHasArgs {
-// 		w.Writef("`%s`", newEndpoint)
-// 	} else {
-// 		w.Writef("\"%s\"", newEndpoint)
-// 	}
-//
-// 	w.Writef(", \"%s\"", e.Method)
-//
-// 	if e.ResponseType != "" {
-// 		w.Writef(", api.%s", e.ResponseType)
-// 	} else {
-// 		w.Writef(", z.undefined()")
-// 	}
-//
-// 	w.Writef(", z.undefined()")
-//
-// 	w.Writef(", formData")
-//
-// 	w.Writef(", options")
-//
-// 	w.Writef(")\n")
-// 	w.Unindent()
-//
-// 	w.IWritef("}\n")
-//
-// 	return nil
-// }
+	name := g.mapName(e.Name)
+
+	b := strings.Builder{}
+
+	for _, v := range args {
+		fmt.Fprintf(&b, "%s string, ", v)
+	}
+
+	w.IndentWritef("func (c *ClientUrls) %v(%s) (*URL, error) {\n", name, b.String())
+	w.Indent()
+
+	if len(args) > 0 {
+		b := strings.Builder{}
+		for _, v := range args {
+			fmt.Fprintf(&b, ", %s", v)
+		}
+
+		w.IndentWritef("path := Sprintf(\"%v\"%s)\n", newPath, b.String())
+	} else {
+		w.IndentWritef("path := \"%v\"\n", e.Path)
+	}
+
+	w.IndentWritef("return c.getUrl(path)\n")
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	return nil
+}
 
 func (g *GolangGenerator) generateClientCode(w io.Writer, serverDef *spark.ServerDef) error {
 	cw := spark.NewCodeWriter(w, indent)
@@ -385,6 +354,15 @@ func (g *GolangGenerator) generateClientCode(w io.Writer, serverDef *spark.Serve
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	for _, endpoint := range serverDef.Endpoints {
+		cw.IndentWritef("\n")
+
+		err := g.generateUrlForEndpoint(&cw, &endpoint)
+		if err != nil {
+			return err
 		}
 	}
 
