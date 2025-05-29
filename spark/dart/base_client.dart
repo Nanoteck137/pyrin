@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:result_dart/result_dart.dart';
 import 'package:dio/dio.dart';
 
+typedef FormDataType = FormData;
+
 class ApiError {
   const ApiError(this.type, this.code, this.message);
 
@@ -55,6 +57,44 @@ class BaseApiClient {
       options: Options(method: method, headers: headers),
       queryParameters: options?.query,
       data: body != null ? jsonEncode(body) : null,
+    );
+
+    final data = res.data as Map<String, dynamic>;
+
+    final success = data["success"] as bool;
+
+    if (!success) {
+      final error = data["error"] as Map<String, dynamic>;
+      return Failure(
+        ApiError(
+          error["type"] as String,
+          error["code"] as int,
+          error["message"] as String,
+        ),
+      );
+    }
+
+    return Success(data["data"]);
+  }
+
+  AsyncResultDart<Map<String, dynamic>, ApiError> requestForm(
+    String method,
+    String path, {
+    RequestOptions? options,
+    FormData? body,
+  }) async {
+    final headers = <String, dynamic>{...this.headers};
+    headers["Content-Type"] = "multipart/form-data";
+
+    if (options?.headers != null) {
+      headers.addAll(options!.headers!);
+    }
+
+    final res = await _dio.request(
+      path,
+      options: Options(method: method, headers: headers),
+      queryParameters: options?.query,
+      data: body,
     );
 
     final data = res.data as Map<String, dynamic>;

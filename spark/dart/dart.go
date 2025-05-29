@@ -221,6 +221,54 @@ func (g *DartGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.Endpoi
 	return nil
 }
 
+func (g *DartGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark.Endpoint) error {
+	newPath, args := utils.ReplacePathArgs(e.Path, g.mapName, func(name string) string {
+		return "$" + name
+	})
+
+	name := g.mapName(strcase.ToLowerCamel(e.Name))
+	response := g.mapName(e.Response)
+	// body := g.mapName(e.Body)
+
+	if response == "" {
+		response = "NoBody"
+	}
+
+	w.IndentWritef("AsyncResultDart<%s, ApiError> %s(", response, name)
+	for _, arg := range args {
+		w.Writef("String %s, ", arg)
+	}
+
+	w.Writef("FormDataType body, ")
+
+	// if body != "" {
+	// 	w.Writef("%s body, ", body)
+	// }
+
+	w.Writef("{")
+	w.Writef("RequestOptions? options")
+	w.Writef("}")
+
+	w.Writef(") async {\n")
+	w.Indent()
+
+	w.IndentWritef("final res = await requestForm(\"%s\", \"%s\"", e.Method, newPath)
+	w.Writef(", options: options")
+	w.Writef(", body: body")
+	w.Writef(");\n")
+
+	if response != "NoBody" {
+		w.IndentWritef("return res.map((success) => %s.fromJson(success));\n", response)
+	} else {
+		w.IndentWritef("return res.map((success) => NoBody());\n")
+	}
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	return nil
+}
+
 // func generateFormApiEndpoint(w *utils.CodeWriter, e *spec.FormApiEndpoint) error {
 // 	var args []string
 // 	parts := strings.Split(e.Path, "/")
@@ -308,6 +356,11 @@ func (g *DartGenerator) generateClientCode(out io.Writer, serverDef *spark.Serve
 		switch endpoint.Type {
 		case spark.EndpointTypeApi:
 			err := g.generateApiEndpoint(&w, &endpoint)
+			if err != nil {
+				return err
+			}
+		case spark.EndpointTypeForm:
+			err := g.generateFormEndpoint(&w, &endpoint)
 			if err != nil {
 				return err
 			}
