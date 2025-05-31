@@ -188,18 +188,15 @@ func main() {
 
 		pretty.Println(serverDef)
 
-		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
+		err = serverDef.SaveToFile("./work/pyrin.json")
 		if err != nil {
 			logger.Fatal("failed", "err", err)
 		}
 
-		os.RemoveAll("./work/typescript")
-		os.RemoveAll("./work/golang")
-		os.RemoveAll("./work/dart")
-
-		os.Mkdir("./work/typescript", 0755)
-		os.Mkdir("./work/golang", 0755)
-		os.Mkdir("./work/dart", 0755)
+		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
+		if err != nil {
+			logger.Fatal("failed", "err", err)
+		}
 
 		{
 			gen := typescript.TypescriptGenerator{

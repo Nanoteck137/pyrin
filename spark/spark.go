@@ -1,9 +1,11 @@
 package spark
 
 import (
+	"encoding/json"
 	"fmt"
 	goast "go/ast"
 	goparser "go/parser"
+	"os"
 	"reflect"
 )
 
@@ -51,6 +53,20 @@ type ServerDef struct {
 
 	Structures []StructDef `json:"structures"`
 	Endpoints  []Endpoint  `json:"endpoints"`
+}
+
+func (s *ServerDef) SaveToFile(p string) error {
+	d, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(p, d, 0644)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func parseTypespecBase(ty goast.Expr) Typespec {
