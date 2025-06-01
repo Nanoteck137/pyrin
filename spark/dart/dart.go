@@ -3,6 +3,7 @@ package dart
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -80,11 +81,7 @@ func (g *DartGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spar
 	w.IndentWritef("part 'types.g.dart';\n")
 	w.IndentWritef("\n")
 
-	for _, s := range resolver.Symbols {
-		if s.State != spark.SymbolResolved {
-			continue
-		}
-
+	for _, s := range resolver.ResolvedSymbols {
 		rs := s.ResolvedStruct
 
 		err := g.generateStruct(&w, rs)
@@ -144,6 +141,8 @@ func (g *DartGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldTyp
 		w.Writef("String")
 	case *spark.FieldTypeInt:
 		w.Writef("int")
+	case *spark.FieldTypeFloat:
+		w.Writef("float")
 	case *spark.FieldTypeBoolean:
 		w.Writef("bool")
 	case *spark.FieldTypeArray:
@@ -153,9 +152,11 @@ func (g *DartGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldTyp
 	case *spark.FieldTypePtr:
 		g.generateFieldType(w, t.BaseType)
 		w.Writef("?")
+	case *spark.FieldTypeStructRef:
+		name := g.mapName(t.Name)
+		w.Writef("%s", name)
 	default:
-		// TODO(patrik): Better error
-		panic("Unknown type")
+		panic(fmt.Sprintf("generateFieldType: unknown type: %t", t))
 	}
 }
 
