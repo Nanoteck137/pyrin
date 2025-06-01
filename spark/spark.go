@@ -86,11 +86,8 @@ func parseTypespecBase(ty goast.Expr) Typespec {
 			Element: element,
 		}
 	default:
-		// TODO(patrik): Better error
-		panic("Unknown type")
+		panic(fmt.Sprintf("parseTypespecBase: unknown type: %t", ty))
 	}
-
-	return nil
 }
 
 func ParseTypespec(s string) (Typespec, error) {
