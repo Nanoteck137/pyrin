@@ -105,6 +105,8 @@ func fieldTypeToString(ty FieldType) (string, error) {
 		return "string", nil
 	case *FieldTypeInt:
 		return "int", nil
+	case *FieldTypeFloat:
+		return "float", nil
 	case *FieldTypeBoolean:
 		return "bool", nil
 	case *FieldTypeArray:
