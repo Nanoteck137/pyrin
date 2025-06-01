@@ -126,6 +126,8 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 		w.Writef("z.string()")
 	case *spark.FieldTypeInt:
 		w.Writef("z.number()")
+	case *spark.FieldTypeFloat:
+		w.Writef("z.number()")
 	case *spark.FieldTypeBoolean:
 		w.Writef("z.boolean()")
 	case *spark.FieldTypeArray:
@@ -135,6 +137,9 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 	case *spark.FieldTypePtr:
 		g.generateFieldType(w, t.BaseType)
 		w.Writef(".nullable()")
+	case *spark.FieldTypeStructRef:
+		name := g.mapName(t.Name)
+		w.Writef("%s", name)
 	default:
 		// TODO(patrik): Better error
 		panic("Unknown type")
