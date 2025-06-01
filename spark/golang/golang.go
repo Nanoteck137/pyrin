@@ -79,11 +79,7 @@ func (g *GolangGenerator) generateTypeDefinitionCode(out io.Writer, resolver *sp
 	w.IndentWritef("package api\n")
 	w.IndentWritef("\n")
 
-	for _, s := range resolver.Symbols {
-		if s.State != spark.SymbolResolved {
-			continue
-		}
-
+	for _, s := range resolver.ResolvedSymbols {
 		rs := s.ResolvedStruct
 
 		err := g.generateStruct(&w, rs)
@@ -118,23 +114,28 @@ func (g *GolangGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Resolved
 	return nil
 }
 
-func (g *GolangGenerator) generateFieldType(w io.Writer, ty spark.FieldType) {
+func (g *GolangGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldType) {
 	switch t := ty.(type) {
 	case *spark.FieldTypeString:
-		fmt.Fprint(w, "string")
+		w.Writef("string")
 	case *spark.FieldTypeInt:
 		fmt.Fprint(w, "int")
+		w.Writef("int")
+	case *spark.FieldTypeFloat:
+		w.Writef("float32")
 	case *spark.FieldTypeBoolean:
-		fmt.Fprint(w, "bool")
+		w.Writef("bool")
 	case *spark.FieldTypeArray:
-		fmt.Fprintf(w, "[]")
+		w.Writef("[]")
 		g.generateFieldType(w, t.ElementType)
 	case *spark.FieldTypePtr:
-		fmt.Fprintf(w, "*")
+		w.Writef("*")
 		g.generateFieldType(w, t.BaseType)
+	case *spark.FieldTypeStructRef:
+		name := g.mapName(t.Name)
+		w.Writef("%s", name)
 	default:
-		// TODO(patrik): Better error
-		panic("Unknown type")
+		panic(fmt.Sprintf("generateFieldType: unknown type: %t", t))
 	}
 }
 
