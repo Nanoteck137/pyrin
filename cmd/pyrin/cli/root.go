@@ -4,8 +4,13 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/nanoteck137/pyrin/trail"
 	"github.com/spf13/cobra"
 )
+
+var logger = trail.NewLogger(&trail.Options{
+	Debug: true,
+})
 
 var AppName = "pyrin"
 var Version = "no-version"
