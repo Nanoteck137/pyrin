@@ -11,12 +11,12 @@ REST API Framework
 - [ ] API Docs Generation
 
 ## Packages
-- [ ] spark - Code Gen
-- [ ] ember - Database Handling
+- [x] spark - Code Gen
+- [x] ember - Database Handling
 - [ ] flare - Doc Generation
 - [ ] chisel - Filter/Sorting parsing
 - [ ] anvil - Validation
-- [ ] trail - Logging
+- [x] trail - Logging
 
 # Projects Used
 - [ozzo-validation](https://github.com/go-ozzo/ozzo-validation)
