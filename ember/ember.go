@@ -69,7 +69,12 @@ func (s *Database) Exec(ctx context.Context, query Query) (sql.Result, error) {
 		return nil, s.handleErr(err)
 	}
 
-	return s.ExecContext(ctx, sql, params...)
+	res, err := s.ExecContext(ctx, sql, params...)
+	if err != nil {
+		return nil, s.handleErr(err)
+	}
+
+	return res, nil
 }
 
 func (s *Database) Multiple(ctx context.Context, query Query, dest any) error {
@@ -78,7 +83,12 @@ func (s *Database) Multiple(ctx context.Context, query Query, dest any) error {
 		return s.handleErr(err)
 	}
 
-	return s.SelectContext(ctx, dest, sql, params...)
+	err = s.SelectContext(ctx, dest, sql, params...)
+	if err != nil {
+		return s.handleErr(err)
+	}
+
+	return nil
 }
 
 // Query implements Database.
@@ -88,7 +98,12 @@ func (s *Database) Query(ctx context.Context, query Query) (*sql.Rows, error) {
 		return nil, s.handleErr(err)
 	}
 
-	return s.QueryContext(ctx, sql, params...)
+	res, err := s.QueryContext(ctx, sql, params...)
+	if err != nil {
+		return nil, s.handleErr(err)
+	}
+
+	return res, nil
 }
 
 // QueryRow implements Database.
@@ -98,7 +113,8 @@ func (s *Database) QueryRow(ctx context.Context, query Query) (*sql.Row, error) 
 		return nil, s.handleErr(err)
 	}
 
-	return s.QueryRowContext(ctx, sql, params...), nil
+	res := s.QueryRowContext(ctx, sql, params...)
+	return res, nil
 }
 
 // Single implements Database.
@@ -108,7 +124,12 @@ func (s *Database) Single(ctx context.Context, query Query, dest any) error {
 		return s.handleErr(err)
 	}
 
-	return s.GetContext(ctx, dest, sql, params...)
+	err = s.GetContext(ctx, dest, sql, params...)
+	if err != nil {
+		return s.handleErr(err)
+	}
+
+	return nil
 }
 
 var _ DB = (*Tx)(nil)
@@ -141,7 +162,12 @@ func (s *Tx) Exec(ctx context.Context, query Query) (sql.Result, error) {
 		return nil, s.handleErr(err)
 	}
 
-	return s.ExecContext(ctx, sql, params...)
+	res, err := s.ExecContext(ctx, sql, params...)
+	if err != nil {
+		return nil, s.handleErr(err)
+	}
+
+	return res, nil
 }
 
 func (s *Tx) Multiple(ctx context.Context, query Query, dest any) error {
@@ -150,37 +176,53 @@ func (s *Tx) Multiple(ctx context.Context, query Query, dest any) error {
 		return s.handleErr(err)
 	}
 
-	return s.SelectContext(ctx, dest, sql, params...)
+	err = s.SelectContext(ctx, dest, sql, params...)
+	if err != nil {
+		return s.handleErr(err)
+	}
+
+	return nil
 }
 
-// Query implements Database.
+// Query implements Tx.
 func (s *Tx) Query(ctx context.Context, query Query) (*sql.Rows, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
 		return nil, s.handleErr(err)
 	}
 
-	return s.QueryContext(ctx, sql, params...)
+	res, err := s.QueryContext(ctx, sql, params...)
+	if err != nil {
+		return nil, s.handleErr(err)
+	}
+
+	return res, nil
 }
 
-// QueryRow implements Database.
+// QueryRow implements Tx.
 func (s *Tx) QueryRow(ctx context.Context, query Query) (*sql.Row, error) {
 	sql, params, err := query.ToSQL()
 	if err != nil {
 		return nil, s.handleErr(err)
 	}
 
-	return s.QueryRowContext(ctx, sql, params...), nil
+	res := s.QueryRowContext(ctx, sql, params...)
+	return res, nil
 }
 
-// Single implements Database.
+// Single implements Tx.
 func (s *Tx) Single(ctx context.Context, query Query, dest any) error {
 	sql, params, err := query.ToSQL()
 	if err != nil {
 		return s.handleErr(err)
 	}
 
-	return s.GetContext(ctx, dest, sql, params...)
+	err = s.GetContext(ctx, dest, sql, params...)
+	if err != nil {
+		return s.handleErr(err)
+	}
+
+	return nil
 }
 
 // Simple wrappers for retriving single row from the database
