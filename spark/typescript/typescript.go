@@ -3,6 +3,7 @@ package typescript
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -137,8 +138,7 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 		name := g.mapName(t.Name)
 		w.Writef("%s", name)
 	default:
-		// TODO(patrik): Better error
-		panic("Unknown type")
+		panic(fmt.Sprintf("generateFieldType: unknown type: %t", t))
 	}
 }
 
