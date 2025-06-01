@@ -119,6 +119,8 @@ func fieldTypeToString(ty FieldType) (string, error) {
 			return "", err
 		}
 		return "*" + s, nil
+	case *FieldTypeStructRef:
+		return ty.Name, nil
 	default:
 		return "", fmt.Errorf("Unknown resolved type: %T", ty)
 	}
