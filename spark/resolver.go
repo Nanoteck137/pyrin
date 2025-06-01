@@ -60,7 +60,8 @@ type Symbol struct {
 }
 
 type Resolver struct {
-	Symbols []*Symbol
+	Symbols         []*Symbol
+	ResolvedSymbols []*Symbol
 }
 
 func NewResolver() *Resolver {
@@ -236,6 +237,8 @@ func (resolver *Resolver) Resolve(name string) (*ResolvedStruct, error) {
 	}
 
 	s.State = SymbolResolved
+
+	resolver.ResolvedSymbols = append(resolver.ResolvedSymbols, s)
 
 	return s.ResolvedStruct, nil
 }

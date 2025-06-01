@@ -77,11 +77,7 @@ func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver
 	w.Writef("import { z } from \"zod\";\n")
 	w.Writef("\n")
 
-	for _, s := range resolver.Symbols {
-		if s.State != spark.SymbolResolved {
-			continue
-		}
-
+	for _, s := range resolver.ResolvedSymbols {
 		rs := s.ResolvedStruct
 
 		err := g.generateStruct(&w, rs)
