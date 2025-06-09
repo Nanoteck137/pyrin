@@ -3,8 +3,10 @@ clean:
 	rm -rf tmp
 	rm -f result
 
-publish:
+test-build:
 	nix build --no-link .#
+
+publish: test-build
 	publish-version
 
 .PHONY: clean publish
