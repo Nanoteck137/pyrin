@@ -181,7 +181,10 @@ func main() {
 		router := spark.Router{}
 		registerRoutes(&router)
 
-		serverDef, err := spark.CreateServerDef(&router)
+		fieldNameFilter := spark.NameFilter{}
+		fieldNameFilter.LoadDefault()
+
+		serverDef, err := spark.CreateServerDef(&router, fieldNameFilter)
 		if err != nil {
 			logger.Fatal("failed", "err", err)
 		}
