@@ -13,12 +13,12 @@ import (
 
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
+	"github.com/nanoteck137/pyrin/anvil"
 	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spark"
 	"github.com/nanoteck137/pyrin/spark/dart"
 	"github.com/nanoteck137/pyrin/spark/golang"
 	"github.com/nanoteck137/pyrin/spark/typescript"
-	"github.com/nanoteck137/pyrin/tools/transform"
 	"github.com/nanoteck137/pyrin/trail"
 	"github.com/nanoteck137/validate"
 
@@ -62,9 +62,16 @@ type Test2Body struct {
 	Age      int    `json:"age"`
 }
 
+func (b *Test2Body) Body(c anvil.Context) {
+	c.Field("id", &b.Id, c.Trim(), c.Required())
+	c.Field("name", &b.Name, c.Trim(), c.Required())
+	c.Field("lastName", &b.LastName, c.Trim(), c.Required())
+	c.Field("age", &b.Age, c.Min(18))
+}
+
 func (b *Test2Body) Transform() {
-	b.Name = transform.String(b.Name)
-	b.LastName = transform.String(b.LastName)
+	b.Name = anvil.String(b.Name)
+	b.LastName = anvil.String(b.LastName)
 }
 
 func (b Test2Body) Validate() error {
