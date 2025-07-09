@@ -119,7 +119,6 @@ func (g *GolangGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldT
 	case *spark.FieldTypeString:
 		w.Writef("string")
 	case *spark.FieldTypeInt:
-		fmt.Fprint(w, "int")
 		w.Writef("int")
 	case *spark.FieldTypeFloat:
 		w.Writef("float32")
