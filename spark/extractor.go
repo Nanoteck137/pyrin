@@ -135,7 +135,13 @@ func (c *StructRegistry) getType(t reflect.Type) Typespec {
 		return &PtrTypespec{
 			Base: base,
 		}
-
+	case reflect.Map:
+		key := c.getType(t.Key())
+		value := c.getType(t.Elem())
+		return &MapTypespec{
+			Key:   key,
+			Value: value,
+		}
 	default:
 		// TODO(patrik): Fix
 		log.Fatal("Unknown type ", t.Name(), " ", t.Kind())

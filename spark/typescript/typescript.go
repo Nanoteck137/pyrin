@@ -137,8 +137,14 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 	case *spark.FieldTypeStructRef:
 		name := g.mapName(t.Name)
 		w.Writef("%s", name)
+	case *spark.FieldTypeMap:
+		w.Writef("z.map(")
+		g.generateFieldType(w, t.KeyType)
+		w.Writef(", ")
+		g.generateFieldType(w, t.ValueType)
+		w.Writef(")")
 	default:
-		panic(fmt.Sprintf("generateFieldType: unknown type: %t", t))
+		panic(fmt.Sprintf("generateFieldType: unknown type: %T", t))
 	}
 }
 

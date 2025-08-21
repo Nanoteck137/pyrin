@@ -85,8 +85,16 @@ func parseTypespecBase(ty goast.Expr) Typespec {
 		return &ArrayTypespec{
 			Element: element,
 		}
+	case *goast.MapType:
+		key := parseTypespecBase(ty.Key)
+		value := parseTypespecBase(ty.Value)
+
+		return &MapTypespec{
+			Key:   key,
+			Value: value,
+		}
 	default:
-		panic(fmt.Sprintf("parseTypespecBase: unknown type: %t", ty))
+		panic(fmt.Sprintf("parseTypespecBase: unknown type: %T", ty))
 	}
 }
 
@@ -123,6 +131,18 @@ func fieldTypeToString(ty FieldType) (string, error) {
 		return "*" + s, nil
 	case *FieldTypeStructRef:
 		return ty.Name, nil
+	case *FieldTypeMap:
+		key, err := fieldTypeToString(ty.KeyType)
+		if err != nil {
+			return "", err
+		}
+
+		value, err := fieldTypeToString(ty.ValueType)
+		if err != nil {
+			return "", err
+		}
+
+		return "map[" + key + "]" + value, nil
 	default:
 		return "", fmt.Errorf("Unknown resolved type: %T", ty)
 	}
@@ -204,36 +224,36 @@ func (n *NameFilter) LoadDefault() {
 
 	// NOTE(patrik): Golang keywords
 	// Taken from: https://handhikayp.medium.com/golang-101-6-the-reserved-keywords-in-go-1c8ef12d0fbf
-    n.AddName("break")
-    n.AddName("case")
-    n.AddName("chan")
-    n.AddName("const")
-    n.AddName("continue")
-    n.AddName("default")
-    n.AddName("defer")
-    n.AddName("else")
-    n.AddName("fallthrough")
-    n.AddName("for")
-    n.AddName("func")
-    n.AddName("go")
-    n.AddName("goto")
-    n.AddName("if")
-    n.AddName("import")
-    n.AddName("interface")
-    n.AddName("map")
-    n.AddName("package")
-    n.AddName("range")
-    n.AddName("return")
-    n.AddName("select")
-    n.AddName("struct")
-    n.AddName("switch")
-    n.AddName("type")
-    n.AddName("var")
-    n.AddName("true")
+	n.AddName("break")
+	n.AddName("case")
+	n.AddName("chan")
+	n.AddName("const")
+	n.AddName("continue")
+	n.AddName("default")
+	n.AddName("defer")
+	n.AddName("else")
+	n.AddName("fallthrough")
+	n.AddName("for")
+	n.AddName("func")
+	n.AddName("go")
+	n.AddName("goto")
+	n.AddName("if")
+	n.AddName("import")
+	n.AddName("interface")
+	n.AddName("map")
+	n.AddName("package")
+	n.AddName("range")
+	n.AddName("return")
+	n.AddName("select")
+	n.AddName("struct")
+	n.AddName("switch")
+	n.AddName("type")
+	n.AddName("var")
+	n.AddName("true")
 	n.AddName("false")
 	n.AddName("iota")
 	n.AddName("nil")
-    n.AddName("int")
+	n.AddName("int")
 	n.AddName("int8")
 	n.AddName("int16")
 	n.AddName("int32")
@@ -253,7 +273,7 @@ func (n *NameFilter) LoadDefault() {
 	n.AddName("rune")
 	n.AddName("string")
 	n.AddName("error")
-    n.AddName("make")
+	n.AddName("make")
 	n.AddName("len")
 	n.AddName("cap")
 	n.AddName("new")
@@ -373,7 +393,7 @@ func CreateServerDef(router *Router, fieldNameFilter NameFilter) (ServerDef, err
 		return ServerDef{}, err
 	}
 
-	for _, decl  := range decls {
+	for _, decl := range decls {
 		fmt.Printf("decl.Name: %v\n", decl.Name)
 		for _, field := range decl.Fields {
 			fmt.Printf("field.Name: %v\n", field.Name)
@@ -504,8 +524,8 @@ func CreateResolverFromServerDef(s *ServerDef) (*Resolver, error) {
 			}
 
 			fields = append(fields, &FieldDecl{
-				Name: f.Name,
-				Type: t,
+				Name:      f.Name,
+				Type:      t,
 				OmitEmpty: f.OmitEmpty,
 			})
 		}

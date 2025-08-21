@@ -55,11 +55,17 @@ func (b TestBody) Validate() error {
 	)
 }
 
+type MapTest struct {
+	A string `json:"a"`
+	B int    `json:"b"`
+}
+
 type Test2Body struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-	LastName string `json:"lastName"`
-	Age      int    `json:"age"`
+	Id       string             `json:"id"`
+	Name     string             `json:"name"`
+	LastName string             `json:"lastName"`
+	Age      int                `json:"age"`
+	Map      map[string]*MapTest `json:"mapTest"`
 }
 
 func (b *Test2Body) Body(c anvil.Context) {
@@ -218,7 +224,7 @@ func main() {
 
 			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/typescript/api")
 			if err != nil {
-				logger.Fatal("failed", "err", err)
+				logger.Fatal("failed typescript", "err", err)
 			}
 		}
 
@@ -232,7 +238,7 @@ func main() {
 
 			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/golang/api")
 			if err != nil {
-				logger.Fatal("failed", "err", err)
+				logger.Fatal("failed golang", "err", err)
 			}
 		}
 
@@ -246,7 +252,7 @@ func main() {
 
 			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/dart/lib/api")
 			if err != nil {
-				logger.Fatal("failed", "err", err)
+				logger.Fatal("failed dart", "err", err)
 			}
 		}
 	}

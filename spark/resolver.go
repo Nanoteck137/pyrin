@@ -19,6 +19,10 @@ type FieldTypeArray struct {
 type FieldTypePtr struct {
 	BaseType FieldType
 }
+type FieldTypeMap struct {
+	KeyType FieldType
+	ValueType FieldType
+}
 
 type FieldTypeStructRef struct {
 	Name string
@@ -30,6 +34,7 @@ func (t *FieldTypeFloat) typeType()     {}
 func (t *FieldTypeBoolean) typeType()   {}
 func (t *FieldTypeArray) typeType()     {}
 func (t *FieldTypePtr) typeType()       {}
+func (t *FieldTypeMap) typeType()       {}
 func (t *FieldTypeStructRef) typeType() {}
 
 type ResolvedField struct {
@@ -116,6 +121,21 @@ func (resolver *Resolver) resolveTypespecBase(typespec Typespec, isFromPointer b
 
 		return &FieldTypePtr{
 			BaseType: baseTy,
+		}, nil
+	case *MapTypespec:
+		keyTy, err := resolver.resolveTypespecBase(t.Key, false)
+		if err != nil {
+			return nil, err
+		}
+
+		valueTy, err := resolver.resolveTypespecBase(t.Value, false)
+		if err != nil {
+			return nil, err
+		}
+
+		return &FieldTypeMap{
+			KeyType:   keyTy,
+			ValueType: valueTy,
 		}, nil
 	default:
 		// TODO(patrik): Better error
