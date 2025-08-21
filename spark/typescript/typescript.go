@@ -138,7 +138,7 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 		name := g.mapName(t.Name)
 		w.Writef("%s", name)
 	case *spark.FieldTypeMap:
-		w.Writef("z.map(")
+		w.Writef("z.record(")
 		g.generateFieldType(w, t.KeyType)
 		w.Writef(", ")
 		g.generateFieldType(w, t.ValueType)
