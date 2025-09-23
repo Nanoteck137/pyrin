@@ -71,6 +71,18 @@ func (g *DartGenerator) mapName(name string) string {
 	return name
 }
 
+func (g *DartGenerator) mapFieldName(field *spark.ResolvedField) string {
+	if g.NameMapping == nil {
+		return field.Name
+	}
+
+	if newName, exists := g.NameMapping[field.FullyQualifiedName]; exists {
+		return newName
+	}
+
+	return field.Name
+}
+
 func (g *DartGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spark.Resolver) error {
 	w := spark.NewCodeWriter(out, indent)
 
@@ -108,7 +120,7 @@ func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedSt
 
 	w.Writef("  %s({", name)
 	for i, f := range rs.Fields {
-		name := g.mapName(f.Name)
+		name := g.mapFieldName(&f)
 
 		if i != 0 {
 			w.Writef(", ")
@@ -168,10 +180,9 @@ func (g *DartGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldTyp
 }
 
 func (g *DartGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	jsonName := field.Name
-	name := g.mapName(field.Name)
+	name := g.mapFieldName(field)
 
-	w.IndentWritef("@JsonKey(name: \"%s\")\n", jsonName)
+	w.IndentWritef("@JsonKey(name: \"%s\")\n", field.Name)
 	w.IndentWritef("final ")
 	g.generateFieldType(w, field.Type)
 

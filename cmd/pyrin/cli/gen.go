@@ -138,7 +138,10 @@ func init() {
 	genTsCmd.Flags().StringArrayP("map", "m", []string{}, "Map name")
 	genTsCmd.Flags().StringP("output", "o", "./src/api", "Output directory")
 
+	genGoCmd.Flags().StringArrayP("map", "m", []string{}, "Map name")
 	genGoCmd.Flags().StringP("output", "o", "./api", "Output directory")
+
+	genDartCmd.Flags().StringArrayP("map", "m", []string{}, "Map name")
 	genDartCmd.Flags().StringP("output", "o", "./lib/api", "Output directory")
 
 	genCmd.AddCommand(genTsCmd)

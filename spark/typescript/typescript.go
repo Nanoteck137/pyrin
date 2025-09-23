@@ -71,6 +71,18 @@ func (g *TypescriptGenerator) mapName(name string) string {
 	return name
 }
 
+func (g *TypescriptGenerator) mapFieldName(field *spark.ResolvedField) string {
+	if g.NameMapping == nil {
+		return field.Name
+	}
+
+	if newName, exists := g.NameMapping[field.FullyQualifiedName]; exists {
+		return newName
+	}
+
+	return field.Name
+}
+
 func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spark.Resolver) error {
 	w := spark.NewCodeWriter(out, indent)
 
@@ -93,7 +105,9 @@ func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver
 func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
 	name := g.mapName(rs.Name)
 
-	err := w.Writef("export const %s = z.object({\n", name)
+	rawStructName := name + "Raw"
+
+	err := w.Writef("const %s = z.object({\n", rawStructName)
 	if err != nil {
 		return err
 	}
@@ -105,13 +119,61 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 			return err
 		}
 
-		g.generateField(w, &field)
+		g.generateFieldForRaw(w, &field)
 	}
 	w.Unindent()
 
 	w.Writef("});\n")
+
+	// const UserSchema = IncomingSchema.transform((data) => ({
+	//   userId: data["user-id"],
+	//   email: data["@email"],
+	// }));
+
+	err = w.Writef("export const %s = %s.transform((data) => ({\n", name, rawStructName)
+	if err != nil {
+		return err
+	}
+
+	w.Indent()
+	for _, field := range rs.Fields {
+		err = w.WriteIndent()
+		if err != nil {
+			return err
+		}
+
+		_ = field
+
+		n := g.mapFieldName(&field)
+		w.Writef("%s: data[\"%s\"],\n", n, field.Name)
+
+		// g.generateField(w, &field)
+	}
+	w.Unindent()
+
+	w.Writef("}));\n")
+
 	w.Writef("\n")
 	w.Writef("export type %s = z.infer<typeof %s>;\n", name, name)
+	w.Writef("\n")
+
+	w.Writef("export function serialize%s(body: %s) {\n", name, name)
+	w.Indent()
+
+	w.IndentWritef("return {\n")
+	w.Indent()
+
+	for _, field := range rs.Fields {
+		n := g.mapFieldName(&field)
+		w.IndentWritef("\"%s\": body.%s,\n", field.Name, n)
+	}
+
+	w.Unindent()
+	w.IndentWritef("}\n")
+
+	w.Unindent()
+	w.Writef("}\n")
+
 	w.Writef("\n")
 
 	return nil
@@ -148,18 +210,25 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 	}
 }
 
-func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	// name := g.mapName(field.Name)
-	// NOTE(patrik): We can't map the name for zod schema because that would
-	// screw up json key names, and zod don't have a way to rename object keys
-	name := field.Name
-
-	w.Writef("%s: ", name)
+func (g *TypescriptGenerator) generateFieldForRaw(w *spark.CodeWriter, field *spark.ResolvedField) {
+	w.Writef("\"%s\": ", field.Name)
 	g.generateFieldType(w, field.Type)
 
 	if field.OmitEmpty {
 		w.Writef(".optional()")
 	}
+
+	w.Writef(",\n")
+}
+
+func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
+	// name := g.mapName(field.Name)
+	// NOTE(patrik): We can't map the name for zod schema because that would
+	// screw up json key names, and zod don't have a way to rename object keys
+	name := g.mapFieldName(field)
+
+	w.Writef("%s: ", name)
+	g.generateFieldType(w, field.Type)
 
 	w.Writef(",\n")
 }
@@ -190,6 +259,8 @@ func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.
 
 	w.Indent()
 
+	w.IndentWritef("const newBody = api.serialize%s(body)\n", body)
+
 	w.IndentWritef("return this.request(")
 
 	if len(args) > 0 {
@@ -209,7 +280,7 @@ func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.
 	w.Writef(", z.any()")
 
 	if e.Body != "" {
-		w.Writef(", body")
+		w.Writef(", newBody")
 	} else {
 		w.Writef(", undefined")
 	}

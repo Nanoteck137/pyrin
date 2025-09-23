@@ -25,10 +25,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var logger = trail.NewLogger(&trail.Options{Debug: true, Level: slog.LevelInfo})
+var logger = trail.NewLogger(&trail.Options{Debug: true, Level: slog.LevelDebug})
+
+func init() {
+	slog.SetDefault(logger.Logger)
+}
 
 type TestBody struct {
-	Username        string `json:"username,omitempty"`
+	Username        string `json:"@username,omitempty"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
 }
@@ -203,8 +207,7 @@ func main() {
 		{
 			gen := typescript.TypescriptGenerator{
 				NameMapping: map[string]string{
-					"TestBody": "LelBody",
-					"id":       "bid",
+					"TestBody.@username": "username",
 				},
 			}
 
@@ -217,8 +220,7 @@ func main() {
 		{
 			gen := golang.GolangGenerator{
 				NameMapping: map[string]string{
-					"TestBody": "LelBody",
-					"id":       "bid",
+					"TestBody.@username": "username",
 				},
 			}
 
@@ -231,8 +233,7 @@ func main() {
 		{
 			gen := dart.DartGenerator{
 				NameMapping: map[string]string{
-					"TestBody": "LelBody",
-					"id":       "bid",
+					"TestBody.@username": "username",
 				},
 			}
 

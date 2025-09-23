@@ -20,7 +20,7 @@ type FieldTypePtr struct {
 	BaseType FieldType
 }
 type FieldTypeMap struct {
-	KeyType FieldType
+	KeyType   FieldType
 	ValueType FieldType
 }
 
@@ -38,9 +38,10 @@ func (t *FieldTypeMap) typeType()       {}
 func (t *FieldTypeStructRef) typeType() {}
 
 type ResolvedField struct {
-	Name      string
-	Type      FieldType
-	OmitEmpty bool
+	FullyQualifiedName string
+	Name               string
+	Type               FieldType
+	OmitEmpty          bool
 }
 
 type ResolvedStruct struct {
@@ -147,16 +148,17 @@ func (resolver *Resolver) resolveTypespec(typespec Typespec) (FieldType, error) 
 	return resolver.resolveTypespecBase(typespec, false)
 }
 
-func (resolver *Resolver) ResolveField(field *FieldDecl) (ResolvedField, error) {
+func (resolver *Resolver) ResolveField(decl *StructDecl, field *FieldDecl) (ResolvedField, error) {
 	ty, err := resolver.resolveTypespec(field.Type)
 	if err != nil {
 		return ResolvedField{}, err
 	}
 
 	return ResolvedField{
-		Name:      field.Name,
-		Type:      ty,
-		OmitEmpty: field.OmitEmpty,
+		FullyQualifiedName: fmt.Sprintf("%s.%s", decl.Name, field.Name),
+		Name:               field.Name,
+		Type:               ty,
+		OmitEmpty:          field.OmitEmpty,
 	}, nil
 }
 
@@ -219,7 +221,7 @@ func (resolver *Resolver) resolveStruct(decl *StructDecl) (*ResolvedStruct, erro
 
 	var fields []ResolvedField
 	for _, f := range decl.Fields {
-		f, err := resolver.ResolveField(f)
+		f, err := resolver.ResolveField(decl, f)
 		if err != nil {
 			return nil, err
 		}

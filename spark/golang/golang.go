@@ -72,6 +72,18 @@ func (g *GolangGenerator) mapName(name string) string {
 	return name
 }
 
+func (g *GolangGenerator) mapFieldName(field *spark.ResolvedField) string {
+	if g.NameMapping == nil {
+		return field.Name
+	}
+
+	if newName, exists := g.NameMapping[field.FullyQualifiedName]; exists {
+		return newName
+	}
+
+	return field.Name
+}
+
 func (g *GolangGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spark.Resolver) error {
 	w := spark.NewCodeWriter(out, indent)
 
@@ -144,8 +156,7 @@ func (g *GolangGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldT
 }
 
 func (g *GolangGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	jsonName := field.Name
-	name := g.mapName(strcase.ToCamel(field.Name))
+	name := strcase.ToCamel(g.mapFieldName(field))
 
 	_, isPointer := field.Type.(*spark.FieldTypePtr)
 
@@ -153,7 +164,7 @@ func (g *GolangGenerator) generateField(w *spark.CodeWriter, field *spark.Resolv
 	g.generateFieldType(w, field.Type)
 	w.Writef(" `")
 	w.Writef("json:\"")
-	w.Writef("%s", jsonName)
+	w.Writef("%s", field.Name)
 	// TODO(patrik): Should this be here?
 	if isPointer {
 		w.Writef(",omitempty")
