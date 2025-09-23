@@ -58,7 +58,7 @@ func (kv KVStore) Serialize() (string, error) {
 	return string(b), nil
 }
 
-func Deserialize(data string) (KVStore, error) {
+func DeserializeKVStore(data string) (KVStore, error) {
 	kv := make(KVStore)
 	if data == "" {
 		return kv, nil
@@ -84,14 +84,14 @@ func (kv *KVStore) Scan(src any) error {
 
 	switch value := src.(type) {
 	case string:
-		r, err := Deserialize(value)
+		r, err := DeserializeKVStore(value)
 		if err != nil {
 			return fmt.Errorf("kvstore: failed to deserialize store: %w", err)
 		}
 
 		*kv = r
 	case []byte:
-		r, err := Deserialize(string(value))
+		r, err := DeserializeKVStore(string(value))
 		if err != nil {
 			return fmt.Errorf("kvstore: failed to deserialize store: %w", err)
 		}
