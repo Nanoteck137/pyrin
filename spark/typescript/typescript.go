@@ -106,7 +106,7 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 	name := g.mapName(rs.Name)
 
 	w.IndentWritef("// Name: %s\n", rs.Name)
-	err := w.Writef("const %s = z.object({\n", name)
+	err := w.Writef("export const %s = z.object({\n", name)
 	if err != nil {
 		return err
 	}
