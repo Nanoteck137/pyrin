@@ -267,7 +267,9 @@ func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.
 
 	w.Indent()
 
-	w.IndentWritef("const newBody = api.serialize%s(body)\n", body)
+	if e.Body != "" {
+		w.IndentWritef("const newBody = api.serialize%s(body)\n", body)
+	}
 
 	w.IndentWritef("return this.request(")
 
