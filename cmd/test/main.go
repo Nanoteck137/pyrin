@@ -257,7 +257,7 @@ func main() {
 		}
 	}
 
-	// return
+	return
 	// err := os.Remove("./work/test.db")
 	// if err != nil {
 	// 	fmt.Println("err:", err)

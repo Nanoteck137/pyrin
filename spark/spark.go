@@ -7,6 +7,9 @@ import (
 	goparser "go/parser"
 	"os"
 	"reflect"
+	"sort"
+
+	"github.com/maruel/natural"
 )
 
 type Generator interface {
@@ -394,8 +397,10 @@ func CreateServerDef(router *Router, fieldNameFilter NameFilter) (ServerDef, err
 	}
 
 	for _, decl := range decls {
+		// TODO(patrik): Remove
 		fmt.Printf("decl.Name: %v\n", decl.Name)
 		for _, field := range decl.Fields {
+			// TODO(patrik): Remove
 			fmt.Printf("field.Name: %v\n", field.Name)
 
 			if fieldNameFilter[field.Name] {
@@ -506,6 +511,15 @@ func CreateServerDef(router *Router, fieldNameFilter NameFilter) (ServerDef, err
 			Fields: fields,
 		})
 	}
+
+	sort.SliceStable(res.Structures, func(i, j int) bool {
+		return natural.Less(res.Structures[i].Name, res.Structures[j].Name)
+	})
+
+
+	sort.SliceStable(res.Endpoints, func(i, j int) bool {
+		return natural.Less(res.Endpoints[i].Name, res.Endpoints[j].Name)
+	})
 
 	return res, nil
 }
