@@ -61,10 +61,12 @@ type MapTest struct {
 }
 
 type Test2Body struct {
-	Id       string             `json:"id"`
-	Name     string             `json:"name"`
-	LastName string             `json:"lastName"`
-	Age      int                `json:"age"`
+	Type     string              `json:"type"`
+	Number   int                 `json:"number"`
+	Id       string              `json:"id"`
+	Name     string              `json:"name"`
+	LastName string              `json:"lastName"`
+	Age      int                 `json:"age"`
 	Map      map[string]*MapTest `json:"mapTest"`
 }
 
@@ -172,22 +174,6 @@ func registerRoutes(router pyrin.Router) {
 	})
 }
 
-type TestLel struct {
-	Id   string  `json:"id"`
-	Lel  *string `json:"lel,omitempty"`
-	Test float32 `json:"test"`
-}
-
-type Testing struct {
-	TestLel
-
-	Lel int `json:"lel"`
-}
-
-func test(registry *spark.StructRegistry) error {
-	return registry.Register(TestLel{})
-}
-
 func main() {
 
 	{
@@ -195,7 +181,7 @@ func main() {
 		registerRoutes(&router)
 
 		fieldNameFilter := spark.NameFilter{}
-		fieldNameFilter.LoadDefault()
+		// fieldNameFilter.LoadDefault()
 
 		serverDef, err := spark.CreateServerDef(&router, fieldNameFilter)
 		if err != nil {
@@ -256,12 +242,6 @@ func main() {
 			}
 		}
 	}
-
-	return
-	// err := os.Remove("./work/test.db")
-	// if err != nil {
-	// 	fmt.Println("err:", err)
-	// }
 
 	if false {
 		dbFile := "./work/test.db"
