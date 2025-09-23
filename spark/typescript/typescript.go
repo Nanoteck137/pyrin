@@ -105,10 +105,8 @@ func (g *TypescriptGenerator) generateTypeDefinitionCode(out io.Writer, resolver
 func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
 	name := g.mapName(rs.Name)
 
-	rawStructName := name + "Raw"
-
 	w.IndentWritef("// Name: %s\n", rs.Name)
-	err := w.Writef("const %s = z.object({\n", rawStructName)
+	err := w.Writef("const %s = z.object({\n", name)
 	if err != nil {
 		return err
 	}
@@ -122,66 +120,12 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 			return err
 		}
 
-		g.generateFieldForRaw(w, &field)
+		g.generateField(w, &field)
 	}
 	w.Unindent()
 
 	w.Writef("});\n")
-
-	// const UserSchema = IncomingSchema.transform((data) => ({
-	//   userId: data["user-id"],
-	//   email: data["@email"],
-	// }));
-
-	w.IndentWritef("// Name: %s\n", rs.Name)
-	err = w.Writef("export const %s = %s.transform((data) => ({\n", name, rawStructName)
-	if err != nil {
-		return err
-	}
-
-	w.Indent()
-	for _, field := range rs.Fields {
-		w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
-
-		err = w.WriteIndent()
-		if err != nil {
-			return err
-		}
-
-		_ = field
-
-		n := g.mapFieldName(&field)
-		w.Writef("%s: data[\"%s\"],\n", n, field.Name)
-
-		// g.generateField(w, &field)
-	}
-	w.Unindent()
-
-	w.Writef("}));\n")
-
-	w.Writef("\n")
 	w.Writef("export type %s = z.infer<typeof %s>;\n", name, name)
-	w.Writef("\n")
-
-	w.Writef("export function serialize%s(body: %s) {\n", name, name)
-	w.Indent()
-
-	w.IndentWritef("return {\n")
-	w.Indent()
-
-	for _, field := range rs.Fields {
-		w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
-
-		n := g.mapFieldName(&field)
-		w.IndentWritef("\"%s\": body.%s,\n", field.Name, n)
-	}
-
-	w.Unindent()
-	w.IndentWritef("}\n")
-
-	w.Unindent()
-	w.Writef("}\n")
-
 	w.Writef("\n")
 
 	return nil
@@ -218,25 +162,13 @@ func (g *TypescriptGenerator) generateFieldType(w *spark.CodeWriter, ty spark.Fi
 	}
 }
 
-func (g *TypescriptGenerator) generateFieldForRaw(w *spark.CodeWriter, field *spark.ResolvedField) {
+func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
 	w.Writef("\"%s\": ", field.Name)
 	g.generateFieldType(w, field.Type)
 
 	if field.OmitEmpty {
 		w.Writef(".optional()")
 	}
-
-	w.Writef(",\n")
-}
-
-func (g *TypescriptGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
-	// name := g.mapName(field.Name)
-	// NOTE(patrik): We can't map the name for zod schema because that would
-	// screw up json key names, and zod don't have a way to rename object keys
-	name := g.mapFieldName(field)
-
-	w.Writef("%s: ", name)
-	g.generateFieldType(w, field.Type)
 
 	w.Writef(",\n")
 }
