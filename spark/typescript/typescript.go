@@ -107,6 +107,7 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 
 	rawStructName := name + "Raw"
 
+	w.IndentWritef("// Name: %s\n", rs.Name)
 	err := w.Writef("const %s = z.object({\n", rawStructName)
 	if err != nil {
 		return err
@@ -114,6 +115,8 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 
 	w.Indent()
 	for _, field := range rs.Fields {
+		w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
+
 		err = w.WriteIndent()
 		if err != nil {
 			return err
@@ -130,6 +133,7 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 	//   email: data["@email"],
 	// }));
 
+	w.IndentWritef("// Name: %s\n", rs.Name)
 	err = w.Writef("export const %s = %s.transform((data) => ({\n", name, rawStructName)
 	if err != nil {
 		return err
@@ -137,6 +141,8 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 
 	w.Indent()
 	for _, field := range rs.Fields {
+		w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
+
 		err = w.WriteIndent()
 		if err != nil {
 			return err
@@ -164,6 +170,8 @@ func (g *TypescriptGenerator) generateStruct(w *spark.CodeWriter, rs *spark.Reso
 	w.Indent()
 
 	for _, field := range rs.Fields {
+		w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
+
 		n := g.mapFieldName(&field)
 		w.IndentWritef("\"%s\": body.%s,\n", field.Name, n)
 	}

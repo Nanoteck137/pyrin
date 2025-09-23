@@ -106,10 +106,13 @@ func (g *GolangGenerator) generateTypeDefinitionCode(out io.Writer, resolver *sp
 func (g *GolangGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
 	name := g.mapName(rs.Name)
 
+	w.IndentWritef("// Name: %s\n", rs.Name)
 	w.IndentWritef("type %s struct {\n", name)
 
 	w.Indent()
 	for _, field := range rs.Fields {
+		w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
+
 		err := w.WriteIndent()
 		if err != nil {
 			return err

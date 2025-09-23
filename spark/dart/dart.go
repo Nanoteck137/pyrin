@@ -108,6 +108,7 @@ func (g *DartGenerator) generateTypeDefinitionCode(out io.Writer, resolver *spar
 func (g *DartGenerator) generateStruct(w *spark.CodeWriter, rs *spark.ResolvedStruct) error {
 	name := g.mapName(rs.Name)
 
+	w.IndentWritef("// Name: %s\n", rs.Name)
 	w.IndentWritef("@JsonSerializable()\n")
 	w.IndentWritef("class %s {\n", name)
 	w.Indent()
@@ -182,6 +183,7 @@ func (g *DartGenerator) generateFieldType(w *spark.CodeWriter, ty spark.FieldTyp
 func (g *DartGenerator) generateField(w *spark.CodeWriter, field *spark.ResolvedField) {
 	name := g.mapFieldName(field)
 
+	w.IndentWritef("// Name: %s\n", field.FullyQualifiedName)
 	w.IndentWritef("@JsonKey(name: \"%s\")\n", field.Name)
 	w.IndentWritef("final ")
 	g.generateFieldType(w, field.Type)
