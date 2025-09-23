@@ -397,12 +397,7 @@ func CreateServerDef(router *Router, fieldNameFilter NameFilter) (ServerDef, err
 	}
 
 	for _, decl := range decls {
-		// TODO(patrik): Remove
-		fmt.Printf("decl.Name: %v\n", decl.Name)
 		for _, field := range decl.Fields {
-			// TODO(patrik): Remove
-			fmt.Printf("field.Name: %v\n", field.Name)
-
 			if fieldNameFilter[field.Name] {
 				return ServerDef{}, fmt.Errorf("%s uses banned field name: %s", decl.Name, field.Name)
 			}
