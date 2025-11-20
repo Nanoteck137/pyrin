@@ -106,10 +106,6 @@ export class BaseApiClient {
     const url = createUrl(this.baseUrl, endpoint);
     const headers = this.getInitialHeaders();
 
-    if (body) {
-      headers["Content-Type"] = "multipart/form-data";
-    }
-
     if (extra) {
       if (extra.headers) {
         for (const [key, value] of Object.entries(extra.headers)) {
