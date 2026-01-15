@@ -66,6 +66,10 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 	for _, h := range handlers {
 		switch h := h.(type) {
 		case pyrin.ApiHandler:
+			if h.Name == "" {
+				continue
+			}
+
 			r.Router.AddRoute(ApiRoute{
 				Name:         h.Name,
 				Path:         r.Prefix + h.Path,
@@ -75,6 +79,10 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 				BodyType:     h.BodyType,
 			})
 		case pyrin.FormApiHandler:
+			if h.Name == "" {
+				continue
+			}
+
 			r.Router.AddRoute(FormApiRoute{
 				Name:         h.Name,
 				Path:         r.Prefix + h.Path,
@@ -84,6 +92,10 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 				Spec:         h.Spec,
 			})
 		case pyrin.NormalHandler:
+			if h.Name == "" {
+				continue
+			}
+
 			r.Router.AddRoute(NormalRoute{
 				Name:   h.Name,
 				Path:   r.Prefix + h.Path,

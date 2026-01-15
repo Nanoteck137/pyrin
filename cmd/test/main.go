@@ -97,7 +97,7 @@ func (b Test2Body) Validate() error {
 func registerRoutes(router pyrin.Router) {
 	root := router.Group("")
 	root.Register(pyrin.NormalHandler{
-		Name:   "GetFile",
+		// Name:   "GetFile",
 		Method: http.MethodGet,
 		Path:   "/file",
 		HandlerFunc: func(c pyrin.Context) error {
