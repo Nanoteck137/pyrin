@@ -410,3 +410,50 @@ func ServeFile(c Context, filesystem fs.FS, file string) error {
 
 	return nil
 }
+
+// NOTE(patrik): From: https://hackandsla.sh/posts/2021-11-06-serve-spa-from-go/
+type hookedResponseWriter struct {
+	http.ResponseWriter
+	got404 bool
+}
+
+func (hrw *hookedResponseWriter) WriteHeader(status int) {
+	if status == http.StatusNotFound {
+		hrw.got404 = true
+	} else {
+		hrw.ResponseWriter.WriteHeader(status)
+	}
+}
+
+func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
+	if hrw.got404 {
+		return len(p), nil
+	}
+
+	return hrw.ResponseWriter.Write(p)
+}
+
+func SpaHandler(root fs.FS, indexFilename string) Handler {
+	return &NormalHandler{
+		Method: http.MethodGet,
+		Path:   "/*",
+		HandlerFunc: func(c Context) error {
+			fs := http.FileServer(http.FS(root))
+
+			hookedWriter := &hookedResponseWriter{ResponseWriter: c.Response()}
+			fs.ServeHTTP(hookedWriter, c.Request())
+
+			if hookedWriter.got404 {
+				if !strings.Contains(c.Request().Header.Get("Accept"), "text/html") {
+					c.Response().WriteHeader(http.StatusNotFound)
+					fmt.Fprint(c.Response(), "404 not found")
+				} else {
+					c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
+					ServeFile(c, root, indexFilename)
+				}
+			}
+
+			return nil
+		},
+	}
+}
