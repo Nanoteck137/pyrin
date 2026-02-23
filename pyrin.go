@@ -255,36 +255,52 @@ type Server struct {
 	e *echo.Echo
 }
 
-func errorHandler(err error, c echo.Context) {
+type ErrorCallback func(err error)
+
+func errorHandler(err error, c echo.Context, errorCallback ErrorCallback) {
 	switch err := err.(type) {
 	case *Error:
+		if errorCallback != nil {
+			errorCallback(err)
+		}
+
 		c.JSON(err.Code, ErrorResponse(*err))
 	case *NoContentError:
 		c.NoContent(err.Code)
 	case *echo.HTTPError:
+		if errorCallback != nil {
+			errorCallback(err)
+		}
+
 		c.JSON(err.Code, ErrorResponse(Error{
 			Code:    err.Code,
 			Type:    ErrTypeUnknownError,
 			Message: err.Error(),
 		}))
 	default:
+		if errorCallback != nil {
+			errorCallback(err)
+		}
+
 		c.JSON(500, ErrorResponse(Error{
-			Code: 500,
-			Type: ErrTypeUnknownError,
-			// Message: "Internal Server Error",
-			Message: err.Error(),
+			Code:    500,
+			Type:    ErrTypeUnknownError,
+			Message: "Internal Server Error",
 		}))
 	}
 }
 
 type ServerConfig struct {
 	RegisterHandlers func(router Router)
+	ErrorCallback    ErrorCallback
 	LogName          string
 }
 
 func NewServer(config *ServerConfig) *Server {
 	e := echo.New()
-	e.HTTPErrorHandler = errorHandler
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		errorHandler(err, c, config.ErrorCallback)
+	}
 
 	e.RouteNotFound("/*", func(c echo.Context) error {
 		return RouteNotFound()

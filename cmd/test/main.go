@@ -331,6 +331,9 @@ func main() {
 	}
 
 	server := pyrin.NewServer(&pyrin.ServerConfig{
+		ErrorCallback: func(err error) {
+			slog.Error("API Error", "err", err)
+		},
 		RegisterHandlers: registerRoutes,
 	})
 
