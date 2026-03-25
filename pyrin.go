@@ -450,7 +450,7 @@ func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
 }
 
 func SpaHandler(root fs.FS, indexFilename string) Handler {
-	return &NormalHandler{
+	return NormalHandler{
 		Method: http.MethodGet,
 		Path:   "/*",
 		HandlerFunc: func(c Context) error {
