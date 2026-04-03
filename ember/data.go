@@ -24,19 +24,19 @@ func (j *JsonColumn[T]) Scan(src any) error {
 	case string:
 		err := json.Unmarshal([]byte(value), &j.Data)
 		if err != nil {
-			return fmt.Errorf("jsoncolumn: failed to unmarshal data: %w", err)
+			return fmt.Errorf("JsonColumn: unmarshal: %w", err)
 		}
 
 		j.Valid = true
 	case []byte:
 		err := json.Unmarshal(value, &j.Data)
 		if err != nil {
-			return fmt.Errorf("jsoncolumn: failed to unmarshal data: %w", err)
+			return fmt.Errorf("JsonColumn: unmarshal: %w", err)
 		}
 
 		j.Valid = true
 	default:
-		return fmt.Errorf("jsoncolumn: unsupported src type %T", src)
+		return fmt.Errorf("JsonColumn: unsupported type %T", src)
 	}
 
 	return nil
@@ -86,19 +86,19 @@ func (kv *KVStore) Scan(src any) error {
 	case string:
 		r, err := DeserializeKVStore(value)
 		if err != nil {
-			return fmt.Errorf("kvstore: failed to deserialize store: %w", err)
+			return fmt.Errorf("KVStore: deserialize store: %w", err)
 		}
 
 		*kv = r
 	case []byte:
 		r, err := DeserializeKVStore(string(value))
 		if err != nil {
-			return fmt.Errorf("kvstore: failed to deserialize store: %w", err)
+			return fmt.Errorf("KVStore: deserialize store: %w", err)
 		}
 
 		*kv = r
 	default:
-		return fmt.Errorf("kvstore: unsupported src type %T", src)
+		return fmt.Errorf("KVStore: unsupported type %T", src)
 	}
 
 	return nil
