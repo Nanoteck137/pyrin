@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -13,7 +14,7 @@ var printCmd = &cobra.Command{
 
 		_, resolver, err := readServerDef(input)
 		if err != nil {
-			logger.Fatal("failed to retrive server def", "err", err)
+			log.Fatalf("failed to retrieve server def: %v", err)
 		}
 
 		fmt.Println("Symbols")

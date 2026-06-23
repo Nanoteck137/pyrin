@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -66,7 +67,7 @@ var genTsCmd = &cobra.Command{
 
 		serverDef, resolver, err := readServerDef(input)
 		if err != nil {
-			logger.Fatal("failed to retrive server def", "err", err)
+			log.Fatalf("failed to retrieve server def: %v", err)
 		}
 
 		gen := typescript.TypescriptGenerator{
@@ -75,7 +76,7 @@ var genTsCmd = &cobra.Command{
 
 		err = gen.Generate(serverDef, resolver, output)
 		if err != nil {
-			logger.Fatal("failed to generate typescript", "err", err)
+			log.Fatalf("failed to generate typescript: %v", err)
 		}
 	},
 }
@@ -93,7 +94,7 @@ var genGoCmd = &cobra.Command{
 
 		serverDef, resolver, err := readServerDef(input)
 		if err != nil {
-			logger.Fatal("failed to retrive server def", "err", err)
+			log.Fatalf("failed to retrieve server def: %v", err)
 		}
 
 		gen := golang.GolangGenerator{
@@ -102,7 +103,7 @@ var genGoCmd = &cobra.Command{
 
 		err = gen.Generate(serverDef, resolver, output)
 		if err != nil {
-			logger.Fatal("failed to generate golang", "err", err)
+			log.Fatalf("failed to generate golang: %v", err)
 		}
 	},
 }
@@ -120,7 +121,7 @@ var genDartCmd = &cobra.Command{
 
 		serverDef, resolver, err := readServerDef(input)
 		if err != nil {
-			logger.Fatal("failed to retrive server def", "err", err)
+			log.Fatalf("failed to retrieve server def: %v", err)
 		}
 
 		gen := dart.DartGenerator{
@@ -129,7 +130,7 @@ var genDartCmd = &cobra.Command{
 
 		err = gen.Generate(serverDef, resolver, output)
 		if err != nil {
-			logger.Fatal("failed to generate dart", "err", err)
+			log.Fatalf("failed to generate dart: %v", err)
 		}
 	},
 }

@@ -21,7 +21,16 @@ func ReplacePathArgs(path string, nameMapping NameMapping, replacementFunc Repla
 			if nameMapping != nil {
 				name = nameMapping(name)
 			}
-			
+
+			args = append(args, name)
+
+			parts[i] = replacementFunc(name)
+		} else if len(p) > 2 && p[0] == '{' && p[len(p)-1] == '}' {
+			name := p[1 : len(p)-1]
+			if nameMapping != nil {
+				name = nameMapping(name)
+			}
+
 			args = append(args, name)
 
 			parts[i] = replacementFunc(name)

@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"time"
 
-	"github.com/MadAppGang/httplog/echolog"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/nanoteck137/validate"
 )
 
@@ -22,7 +23,6 @@ const formBodyKey = "body"
 const jsonMimeType = "application/json"
 const multipartFormMimeType = "multipart/form-data"
 
-// TODO(patrik): Move to server config?
 const defaultMemory = 32 << 20
 
 type Context interface {
@@ -39,6 +39,8 @@ type Handler interface {
 	handlerType()
 }
 
+type MiddlewareFunc func(http.Handler) http.Handler
+
 type ApiHandlerFunc func(c Context) (any, error)
 
 type ApiHandler struct {
@@ -48,7 +50,7 @@ type ApiHandler struct {
 	ResponseType any
 	BodyType     any
 	Errors       []ErrorType
-	Middlewares  []echo.MiddlewareFunc
+	Middlewares  []MiddlewareFunc
 	HandlerFunc  ApiHandlerFunc
 }
 
@@ -70,7 +72,7 @@ type FormApiHandler struct {
 	ResponseType any
 	Spec         FormSpec
 	Errors       []ErrorType
-	Middlewares  []echo.MiddlewareFunc
+	Middlewares  []MiddlewareFunc
 	HandlerFunc  ApiHandlerFunc
 }
 
@@ -82,7 +84,7 @@ type NormalHandler struct {
 	Name        string
 	Method      string
 	Path        string
-	Middlewares []echo.MiddlewareFunc
+	Middlewares []MiddlewareFunc
 	HandlerFunc NormalHandlerFunc
 }
 
@@ -91,28 +93,28 @@ func (h NormalHandler) handlerType() {}
 var _ Context = (*wrapperContext)(nil)
 
 type wrapperContext struct {
-	c echo.Context
+	w http.ResponseWriter
+	r *http.Request
 
 	formSpec *FormSpec
 }
 
 func (w *wrapperContext) Response() http.ResponseWriter {
-	return w.c.Response()
+	return w.w
 }
 
 func (w *wrapperContext) Request() *http.Request {
-	return w.c.Request()
+	return w.r
 }
 
 func (w *wrapperContext) Param(name string) string {
-	return w.c.Param(name)
+	return chi.URLParam(w.r, name)
 }
 
 func (w *wrapperContext) checkContentType(expected string) error {
-	contentType := w.c.Request().Header.Get("Content-Type")
+	contentType := w.r.Header.Get("Content-Type")
 	if contentType == "" {
 		return BadContentType(expected)
-
 	}
 
 	typ, _, err := mime.ParseMediaType(contentType)
@@ -132,11 +134,17 @@ type Router interface {
 }
 
 type ServerRouter struct {
-	e *echo.Echo
+	mux          *chi.Mux
+	errorHandler func(err error, w http.ResponseWriter, r *http.Request)
 }
 
 func (r *ServerRouter) Group(prefix string) Group {
-	return newServerGroup(r.e, prefix)
+	sub := chi.NewRouter()
+	r.mux.Mount(prefix, sub)
+	return &ServerGroup{
+		router:       sub,
+		errorHandler: r.errorHandler,
+	}
 }
 
 type Group interface {
@@ -144,8 +152,8 @@ type Group interface {
 }
 
 type ServerGroup struct {
-	prefix string
-	group  *echo.Group
+	router       chi.Router
+	errorHandler func(err error, w http.ResponseWriter, r *http.Request)
 }
 
 func validateForm(spec *FormSpec, form *multipart.Form) error {
@@ -160,7 +168,6 @@ func validateForm(spec *FormSpec, form *multipart.Form) error {
 
 	for field, spec := range spec.Files {
 		files := form.File[field]
-		// TODO(patrik): Should this be more strict when checking num expected
 		if len(files) < spec.NumExpected {
 			extra[field] = fmt.Sprintf("expected %d or more files, got %d", spec.NumExpected, len(files))
 			continue
@@ -174,120 +181,206 @@ func validateForm(spec *FormSpec, form *multipart.Form) error {
 	return nil
 }
 
+func convertPath(path string) string {
+	var b strings.Builder
+	b.Grow(len(path) + 8)
+
+	i := 0
+	for i < len(path) {
+		if path[i] == ':' {
+			b.WriteByte('{')
+			i++
+			for i < len(path) && path[i] != '/' {
+				b.WriteByte(path[i])
+				i++
+			}
+			b.WriteByte('}')
+		} else {
+			b.WriteByte(path[i])
+			i++
+		}
+	}
+
+	return b.String()
+}
+
+func writeJSON(w http.ResponseWriter, code int, data any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(data)
+}
+
 func (g *ServerGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
 		switch h := h.(type) {
 		case ApiHandler:
-			wrapHandler := func(c echo.Context) error {
-				context := &wrapperContext{
-					c: c,
+			handlerFn := func(w http.ResponseWriter, r *http.Request) {
+				ctx := &wrapperContext{
+					w: w,
+					r: r,
 				}
 
 				if h.BodyType != nil {
-					err := context.checkContentType(jsonMimeType)
+					err := ctx.checkContentType(jsonMimeType)
 					if err != nil {
-						return err
+						g.errorHandler(err, w, r)
+						return
 					}
 				}
 
-				data, err := h.HandlerFunc(context)
+				data, err := h.HandlerFunc(ctx)
 				if err != nil {
-					return err
+					g.errorHandler(err, w, r)
+					return
 				}
 
-				return c.JSON(200, SuccessResponse(data))
+				writeJSON(w, http.StatusOK, SuccessResponse(data))
 			}
 
-			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
+			var handler http.Handler = http.HandlerFunc(handlerFn)
+			for i := len(h.Middlewares) - 1; i >= 0; i-- {
+				handler = h.Middlewares[i](handler)
+			}
+
+			g.router.Method(h.Method, convertPath(h.Path), handler)
+
 		case FormApiHandler:
-			wrapHandler := func(c echo.Context) error {
-				context := &wrapperContext{
-					c:        c,
+			handlerFn := func(w http.ResponseWriter, r *http.Request) {
+				ctx := &wrapperContext{
+					w:        w,
+					r:        r,
 					formSpec: &h.Spec,
 				}
 
-				err := context.checkContentType(multipartFormMimeType)
+				err := ctx.checkContentType(multipartFormMimeType)
 				if err != nil {
-					return err
+					g.errorHandler(err, w, r)
+					return
 				}
 
-				err = c.Request().ParseMultipartForm(defaultMemory)
+				err = r.ParseMultipartForm(defaultMemory)
 				if err != nil {
-					return err
+					g.errorHandler(err, w, r)
+					return
 				}
 
-				err = validateForm(context.formSpec, c.Request().MultipartForm)
+				err = validateForm(ctx.formSpec, r.MultipartForm)
 				if err != nil {
-					return err
+					g.errorHandler(err, w, r)
+					return
 				}
 
-				data, err := h.HandlerFunc(context)
+				data, err := h.HandlerFunc(ctx)
 				if err != nil {
-					return err
+					g.errorHandler(err, w, r)
+					return
 				}
 
-				return c.JSON(200, SuccessResponse(data))
+				writeJSON(w, http.StatusOK, SuccessResponse(data))
 			}
 
-			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
+			var handler http.Handler = http.HandlerFunc(handlerFn)
+			for i := len(h.Middlewares) - 1; i >= 0; i-- {
+				handler = h.Middlewares[i](handler)
+			}
+
+			g.router.Method(h.Method, convertPath(h.Path), handler)
 
 		case NormalHandler:
-			wrapHandler := func(c echo.Context) error {
-				context := &wrapperContext{
-					c: c,
+			handlerFn := func(w http.ResponseWriter, r *http.Request) {
+				ctx := &wrapperContext{
+					w: w,
+					r: r,
 				}
-				return h.HandlerFunc(context)
-			}
-			g.group.Add(h.Method, h.Path, wrapHandler, h.Middlewares...)
-		}
-	}
-}
 
-func newServerGroup(e *echo.Echo, prefix string, m ...echo.MiddlewareFunc) *ServerGroup {
-	g := e.Group(prefix, m...)
-	return &ServerGroup{
-		prefix: prefix,
-		group:  g,
+				err := h.HandlerFunc(ctx)
+				if err != nil {
+					g.errorHandler(err, w, r)
+					return
+				}
+			}
+
+			var handler http.Handler = http.HandlerFunc(handlerFn)
+			for i := len(h.Middlewares) - 1; i >= 0; i-- {
+				handler = h.Middlewares[i](handler)
+			}
+
+			g.router.Method(h.Method, convertPath(h.Path), handler)
+		}
 	}
 }
 
 type Server struct {
-	e *echo.Echo
+	mux          *chi.Mux
+	errorHandler func(err error, w http.ResponseWriter, r *http.Request)
 }
 
 type ErrorCallback func(err error)
 
-func errorHandler(err error, c echo.Context, errorCallback ErrorCallback) {
-	switch err := err.(type) {
+func errorHandler(err error, w http.ResponseWriter, r *http.Request, errorCallback ErrorCallback) {
+	switch e := err.(type) {
 	case *Error:
 		if errorCallback != nil {
-			errorCallback(err)
+			errorCallback(e)
 		}
 
-		c.JSON(err.Code, ErrorResponse(*err))
+		writeJSON(w, e.Code, ErrorResponse(*e))
 	case *NoContentError:
-		c.NoContent(err.Code)
-	case *echo.HTTPError:
-		if errorCallback != nil {
-			errorCallback(err)
-		}
-
-		c.JSON(err.Code, ErrorResponse(Error{
-			Code:    err.Code,
-			Type:    ErrTypeUnknownError,
-			Message: err.Error(),
-		}))
+		w.WriteHeader(e.Code)
 	default:
 		if errorCallback != nil {
-			errorCallback(err)
+			errorCallback(e)
 		}
 
-		c.JSON(500, ErrorResponse(Error{
-			Code:    500,
+		writeJSON(w, http.StatusInternalServerError, ErrorResponse(Error{
+			Code:    http.StatusInternalServerError,
 			Type:    ErrTypeUnknownError,
 			Message: "Internal Server Error",
 		}))
 	}
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func loggerMiddleware(logName string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			sr := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(sr, r)
+
+			slog.LogAttrs(r.Context(), slog.LevelInfo, logName,
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", sr.status),
+				slog.Duration("duration", time.Since(start)),
+			)
+		})
+	}
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 type ServerConfig struct {
@@ -297,25 +390,27 @@ type ServerConfig struct {
 }
 
 func NewServer(config *ServerConfig) *Server {
-	e := echo.New()
-	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		errorHandler(err, c, config.ErrorCallback)
+	mux := chi.NewMux()
+
+	errHandler := func(err error, w http.ResponseWriter, r *http.Request) {
+		errorHandler(err, w, r, config.ErrorCallback)
 	}
 
-	e.RouteNotFound("/*", func(c echo.Context) error {
-		return RouteNotFound()
-	})
+	mux.NotFound(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusNotFound, ErrorResponse(*RouteNotFound()))
+	}))
 
 	if config.LogName == "" {
 		config.LogName = "Pyrin Server"
 	}
 
-	e.Use(echolog.LoggerWithName(config.LogName))
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	mux.Use(loggerMiddleware(config.LogName))
+	mux.Use(corsMiddleware)
+	mux.Use(chimiddleware.Recoverer)
 
 	router := ServerRouter{
-		e: e,
+		mux:          mux,
+		errorHandler: errHandler,
 	}
 
 	if config.RegisterHandlers != nil {
@@ -323,33 +418,40 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	return &Server{
-		e: e,
+		mux:          mux,
+		errorHandler: errHandler,
 	}
 }
 
 func (s *Server) Start(addr string) error {
-	return s.e.Start(addr)
+	return http.ListenAndServe(addr, s.mux)
 }
 
-func (s *Server) Group(prefix string, m ...echo.MiddlewareFunc) *ServerGroup {
-	return newServerGroup(s.e, prefix, m...)
+func (s *Server) Group(prefix string, m ...MiddlewareFunc) *ServerGroup {
+	sub := chi.NewRouter()
+	for _, middleware := range m {
+		sub.Use(middleware)
+	}
+	s.mux.Mount(prefix, sub)
+	return &ServerGroup{
+		router:       sub,
+		errorHandler: s.errorHandler,
+	}
 }
 
-type Files []*multipart.FileHeader
-
-func FormFiles(c Context, key string) (Files, error) {
+func FormFiles(c Context, key string) ([]*multipart.FileHeader, error) {
 	wrapperContext := c.(*wrapperContext)
 
 	spec := wrapperContext.formSpec
 
 	if spec == nil {
-		// NOTE(patrik): These are developer faults
+		// TODO(patrik): Internal error
 		return nil, errors.New("handler cannot use forms use 'FormApiHandler'")
 	}
 
 	_, exists := spec.Files[key]
 	if !exists {
-		// NOTE(patrik): These are developer faults
+		// TODO(patrik): Internal error
 		return nil, fmt.Errorf("%s: is not valid, key is not defined in spec", key)
 	}
 
@@ -370,8 +472,6 @@ func Body[T any](c Context) (T, error) {
 	} else {
 		data := c.Request().FormValue(formBodyKey)
 		body = strings.NewReader(data)
-
-		// TODO(patrik): Add check for body type to match the spec
 	}
 
 	decoder := json.NewDecoder(body)
@@ -427,7 +527,6 @@ func ServeFile(c Context, filesystem fs.FS, file string) error {
 	return nil
 }
 
-// NOTE(patrik): From: https://hackandsla.sh/posts/2021-11-06-serve-spa-from-go/
 type hookedResponseWriter struct {
 	http.ResponseWriter
 	got404 bool

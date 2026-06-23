@@ -1,38 +1,25 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
-	"github.com/nanoteck137/pyrin/anvil"
-	"github.com/nanoteck137/pyrin/ember"
 	"github.com/nanoteck137/pyrin/spark"
 	"github.com/nanoteck137/pyrin/spark/dart"
 	"github.com/nanoteck137/pyrin/spark/golang"
 	"github.com/nanoteck137/pyrin/spark/typescript"
-	"github.com/nanoteck137/pyrin/trail"
 	"github.com/nanoteck137/validate"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
-var logger = trail.NewLogger(&trail.Options{Debug: true, Level: slog.LevelDebug})
-
-func init() {
-	slog.SetDefault(logger.Logger)
-}
-
 type TestBody struct {
-	Username        string `json:"@username,omitempty"`
+	Username        string `json:"username,omitempty"`
 	Password        string `json:"password"`
 	ConfirmPassword string `json:"confirmPassword"`
 }
@@ -74,16 +61,9 @@ type Test2Body struct {
 	Map      map[string]*MapTest `json:"mapTest"`
 }
 
-func (b *Test2Body) Body(c anvil.Context) {
-	c.Field("id", &b.Id, c.Trim(), c.Required())
-	c.Field("name", &b.Name, c.Trim(), c.Required())
-	c.Field("lastName", &b.LastName, c.Trim(), c.Required())
-	c.Field("age", &b.Age, c.Min(18))
-}
-
 func (b *Test2Body) Transform() {
-	b.Name = anvil.String(b.Name)
-	b.LastName = anvil.String(b.LastName)
+	b.Name = strings.TrimSpace(b.Name)
+	b.LastName = strings.TrimSpace(b.LastName)
 }
 
 func (b Test2Body) Validate() error {
@@ -95,9 +75,8 @@ func (b Test2Body) Validate() error {
 }
 
 func registerRoutes(router pyrin.Router) {
-	root := router.Group("")
+	root := router.Group("/")
 	root.Register(pyrin.NormalHandler{
-		// Name:   "GetFile",
 		Method: http.MethodGet,
 		Path:   "/file",
 		HandlerFunc: func(c pyrin.Context) error {
@@ -107,6 +86,16 @@ func registerRoutes(router pyrin.Router) {
 	})
 
 	v1 := router.Group("/api/v1")
+	v1.Register(pyrin.ApiHandler{
+		Name:     "Test123",
+		Method:   http.MethodPost,
+		Path:     "/test/123",
+		HandlerFunc: func(c pyrin.Context) (any, error) {
+			fmt.Println("123 hit")
+			return nil, errors.New("test error") 
+		},
+	})
+
 	v1.Register(pyrin.ApiHandler{
 		Name:     "Test",
 		Method:   http.MethodPost,
@@ -179,29 +168,30 @@ func registerRoutes(router pyrin.Router) {
 }
 
 func main() {
-
-	{
+	if false {
 		router := spark.Router{}
 		registerRoutes(&router)
 
 		fieldNameFilter := spark.NameFilter{}
-		// fieldNameFilter.LoadDefault()
 
 		serverDef, err := spark.CreateServerDef(&router, fieldNameFilter)
 		if err != nil {
-			logger.Fatal("failed", "err", err)
+			slog.Error("failed", "err", err)
+			return
 		}
 
 		pretty.Println(serverDef)
 
 		err = serverDef.SaveToFile("./work/pyrin.json")
 		if err != nil {
-			logger.Fatal("failed", "err", err)
+			slog.Error("failed", "err", err)
+			return
 		}
 
 		resolver, err := spark.CreateResolverFromServerDef(&serverDef)
 		if err != nil {
-			logger.Fatal("failed", "err", err)
+			slog.Error("failed", "err", err)
+			return
 		}
 
 		{
@@ -213,7 +203,8 @@ func main() {
 
 			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/typescript/api")
 			if err != nil {
-				logger.Fatal("failed typescript", "err", err)
+				slog.Error("failed typescript", "err", err)
+				return
 			}
 		}
 
@@ -226,7 +217,8 @@ func main() {
 
 			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/golang/api")
 			if err != nil {
-				logger.Fatal("failed golang", "err", err)
+				slog.Error("failed golang", "err", err)
+				return
 			}
 		}
 
@@ -239,94 +231,9 @@ func main() {
 
 			err = gen.Generate(&serverDef, resolver, "../pyrin-test-projects/dart/lib/api")
 			if err != nil {
-				logger.Fatal("failed dart", "err", err)
+				slog.Error("failed dart", "err", err)
+				return
 			}
-		}
-	}
-
-	if false {
-		dbFile := "./work/test.db"
-		dbUrl := fmt.Sprintf("file:%s?_foreign_keys=true", dbFile)
-		db, err := ember.OpenDatabase("sqlite3", dbUrl)
-		if err != nil {
-			logger.Fatal("failed", "err", err)
-		}
-
-		migrations := []ember.Migration{
-			{
-				Title:   "init",
-				Version: 1,
-				Done:    false,
-				Up: func(ctx context.Context, db ember.DB) error {
-					_, err = db.Exec(ctx, ember.RawQuery{
-						Sql: `
-					CREATE TABLE tracks(
-						id TEXT PRIMARY KEY,
-
-						title TEXT NOT NULL,
-						album_name TEXT NOT NULL,
-						aritst_name TEXT NOT NULL
-					);
-					`,
-						Params: []any{},
-					})
-					if err != nil {
-						return err
-					}
-
-					return nil
-				},
-				Down: func(ctx context.Context, db ember.DB) error {
-					_, err = db.Exec(ctx, ember.RawQuery{
-						Sql: `
-					DROP TABLE tracks;
-					`,
-						Params: []any{},
-					})
-					if err != nil {
-						return err
-					}
-
-					return nil
-				},
-			},
-			{
-				Title:   "test",
-				Version: 3,
-				Done:    false,
-				Up:      nil,
-				Down:    nil,
-			},
-			{
-				Title:   "test",
-				Version: 2,
-				Done:    false,
-				Up:      nil,
-				Down:    nil,
-			},
-			{
-				Title:   "test",
-				Version: 4,
-				Done:    false,
-				Up:      nil,
-				Down:    nil,
-			},
-		}
-
-		sort.SliceStable(migrations, func(i, j int) bool {
-			return migrations[i].Version < migrations[j].Version
-		})
-
-		ctx := context.Background()
-
-		err = ember.SetupMigrations(ctx, db)
-		if err != nil {
-			logger.Fatal("failed", "err", err)
-		}
-
-		err = ember.ApplyMigrations(ctx, db, migrations)
-		if err != nil {
-			logger.Fatal("failed", "err", err)
 		}
 	}
 
@@ -337,33 +244,9 @@ func main() {
 		RegisterHandlers: registerRoutes,
 	})
 
-	// router := spec.Router{}
-	// registerRoutes(&router)
-	//
-	// s, err := spec.GenerateSpec(router.Routes)
-	// if err != nil {
-	// 	logger.Fatal("Failed to generate spec", "err", err)
-	// }
-	//
-	// d, err := json.MarshalIndent(s, "", "  ")
-	// if err != nil {
-	// 	logger.Fatal("Failed to marshal server", "err", err)
-	// }
-	//
-	// fmt.Printf("string(d): %v\n", string(d))
-	//
-	// err = gen.GenerateTypescript(s, "./work/ts")
-	// if err != nil {
-	// 	logger.Fatal("Failed", "err", err)
-	// }
-	//
-	// _ = server
+	fmt.Println("Starting on :1337")
 	err := server.Start(":1337")
 	if err != nil {
-		logger.Fatal("failed", "err", err)
+		slog.Error("failed", "err", err)
 	}
-}
-
-func init() {
-	slog.SetDefault(logger.Logger)
 }
