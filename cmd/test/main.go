@@ -8,7 +8,9 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/pyrin"
 	"github.com/nanoteck137/pyrin/spark"
@@ -85,14 +87,24 @@ func registerRoutes(router pyrin.Router) {
 		},
 	})
 
-	v1 := router.Group("/api/v1")
-	v1.Register(pyrin.ApiHandler{
-		Name:     "Test123",
-		Method:   http.MethodPost,
-		Path:     "/test/123",
+	root.Register(pyrin.ApiHandler{
+		Name:   "Test123",
+		Method: http.MethodPost,
+		Path:   "/test/123",
 		HandlerFunc: func(c pyrin.Context) (any, error) {
 			fmt.Println("123 hit")
-			return nil, errors.New("test error") 
+			return nil, errors.New("test error")
+		},
+	})
+
+	v1 := router.Group("/api/v1")
+	v1.Register(pyrin.ApiHandler{
+		Name:   "Test123",
+		Method: http.MethodPost,
+		Path:   "/test/123",
+		HandlerFunc: func(c pyrin.Context) (any, error) {
+			fmt.Println("123 hit")
+			return nil, errors.New("test error")
 		},
 	})
 
@@ -167,8 +179,51 @@ func registerRoutes(router pyrin.Router) {
 	})
 }
 
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func loggerMiddleware(logName string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			sr := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(sr, r)
+
+			slog.LogAttrs(r.Context(), slog.LevelInfo, logName,
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", sr.status),
+				slog.Duration("duration", time.Since(start)),
+			)
+		})
+	}
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
-	if false {
+	if true {
 		router := spark.Router{}
 		registerRoutes(&router)
 
@@ -242,7 +297,14 @@ func main() {
 			slog.Error("API Error", "err", err)
 		},
 		RegisterHandlers: registerRoutes,
+		Middlewares: []pyrin.MiddlewareFunc{
+			loggerMiddleware("Test"),
+			corsMiddleware,
+			middleware.Recoverer,
+		},
 	})
+
+	registerRoutes(server)
 
 	fmt.Println("Starting on :1337")
 	err := server.Start(":1337")

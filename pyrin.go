@@ -6,15 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log/slog"
 	"mime"
 	"mime/multipart"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/nanoteck137/validate"
 )
 
@@ -130,28 +127,14 @@ func (w *wrapperContext) checkContentType(expected string) error {
 }
 
 type Router interface {
-	Group(prefix string) Group
-}
-
-type ServerRouter struct {
-	mux          *chi.Mux
-	errorHandler func(err error, w http.ResponseWriter, r *http.Request)
-}
-
-func (r *ServerRouter) Group(prefix string) Group {
-	sub := chi.NewRouter()
-	r.mux.Mount(prefix, sub)
-	return &ServerGroup{
-		router:       sub,
-		errorHandler: r.errorHandler,
-	}
+	Group(prefix string, middlewares ...MiddlewareFunc) Group
 }
 
 type Group interface {
 	Register(handlers ...Handler)
 }
 
-type ServerGroup struct {
+type serverGroup struct {
 	router       chi.Router
 	errorHandler func(err error, w http.ResponseWriter, r *http.Request)
 }
@@ -169,7 +152,11 @@ func validateForm(spec *FormSpec, form *multipart.Form) error {
 	for field, spec := range spec.Files {
 		files := form.File[field]
 		if len(files) < spec.NumExpected {
-			extra[field] = fmt.Sprintf("expected %d or more files, got %d", spec.NumExpected, len(files))
+			extra[field] = fmt.Sprintf(
+				"expected %d or more files, got %d",
+				spec.NumExpected,
+				len(files),
+			)
 			continue
 		}
 	}
@@ -210,7 +197,7 @@ func writeJSON(w http.ResponseWriter, code int, data any) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func (g *ServerGroup) Register(handlers ...Handler) {
+func (g *serverGroup) Register(handlers ...Handler) {
 	for _, h := range handlers {
 		switch h := h.(type) {
 		case ApiHandler:
@@ -340,53 +327,10 @@ func errorHandler(err error, w http.ResponseWriter, r *http.Request, errorCallba
 	}
 }
 
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
-
-func (r *statusRecorder) WriteHeader(code int) {
-	r.status = code
-	r.ResponseWriter.WriteHeader(code)
-}
-
-func loggerMiddleware(logName string) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
-			sr := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-			next.ServeHTTP(sr, r)
-
-			slog.LogAttrs(r.Context(), slog.LevelInfo, logName,
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.Int("status", sr.status),
-				slog.Duration("duration", time.Since(start)),
-			)
-		})
-	}
-}
-
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-		w.Header().Set("Access-Control-Max-Age", "86400")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
 type ServerConfig struct {
 	RegisterHandlers func(router Router)
 	ErrorCallback    ErrorCallback
-	LogName          string
+	Middlewares      []MiddlewareFunc
 }
 
 func NewServer(config *ServerConfig) *Server {
@@ -397,24 +341,12 @@ func NewServer(config *ServerConfig) *Server {
 	}
 
 	mux.NotFound(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusNotFound, ErrorResponse(*RouteNotFound()))
+		errHandler(RouteNotFound(), w, r)
+		// writeJSON(w, http.StatusNotFound, ErrorResponse(*RouteNotFound()))
 	}))
 
-	if config.LogName == "" {
-		config.LogName = "Pyrin Server"
-	}
-
-	mux.Use(loggerMiddleware(config.LogName))
-	mux.Use(corsMiddleware)
-	mux.Use(chimiddleware.Recoverer)
-
-	router := ServerRouter{
-		mux:          mux,
-		errorHandler: errHandler,
-	}
-
-	if config.RegisterHandlers != nil {
-		config.RegisterHandlers(&router)
+	for _, m := range config.Middlewares {
+		mux.Use(m)
 	}
 
 	return &Server{
@@ -427,13 +359,19 @@ func (s *Server) Start(addr string) error {
 	return http.ListenAndServe(addr, s.mux)
 }
 
-func (s *Server) Group(prefix string, m ...MiddlewareFunc) *ServerGroup {
+func (s *Server) Group(
+	prefix string,
+	middlewares ...MiddlewareFunc,
+) Group {
 	sub := chi.NewRouter()
-	for _, middleware := range m {
+
+	for _, middleware := range middlewares {
 		sub.Use(middleware)
 	}
+
 	s.mux.Mount(prefix, sub)
-	return &ServerGroup{
+
+	return &serverGroup{
 		router:       sub,
 		errorHandler: s.errorHandler,
 	}
@@ -445,13 +383,13 @@ func FormFiles(c Context, key string) ([]*multipart.FileHeader, error) {
 	spec := wrapperContext.formSpec
 
 	if spec == nil {
-		// TODO(patrik): Internal error
+		// TODO(patrik): Internal error or panic
 		return nil, errors.New("handler cannot use forms use 'FormApiHandler'")
 	}
 
 	_, exists := spec.Files[key]
 	if !exists {
-		// TODO(patrik): Internal error
+		// TODO(patrik): Internal error or panic
 		return nil, fmt.Errorf("%s: is not valid, key is not defined in spec", key)
 	}
 
@@ -559,7 +497,8 @@ func SpaHandler(root fs.FS, indexFilename string) Handler {
 			fs.ServeHTTP(hookedWriter, c.Request())
 
 			if hookedWriter.got404 {
-				if !strings.Contains(c.Request().Header.Get("Accept"), "text/html") {
+				accept := c.Request().Header.Get("Accept")
+				if !strings.Contains(accept, "text/html") {
 					c.Response().WriteHeader(http.StatusNotFound)
 					fmt.Fprint(c.Response(), "404 not found")
 				} else {

@@ -1,6 +1,10 @@
 package spark
 
-import "github.com/nanoteck137/pyrin"
+import (
+	"strings"
+
+	"github.com/nanoteck137/pyrin"
+)
 
 var _ pyrin.Router = (*Router)(nil)
 
@@ -12,7 +16,10 @@ func (r *Router) AddRoute(route Route) {
 	r.Routes = append(r.Routes, route)
 }
 
-func (r *Router) Group(prefix string) pyrin.Group {
+func (r *Router) Group(
+	prefix string, 
+	middlewares ...pyrin.MiddlewareFunc,
+) pyrin.Group {
 	return NewRouteGroup(r, prefix)
 }
 
@@ -55,6 +62,10 @@ type RouteGroup struct {
 	Prefix string
 }
 
+func joinPaths(prefix, path string) string {
+	return strings.TrimRight(prefix, "/") + "/" + strings.TrimLeft(path, "/")
+}
+
 func NewRouteGroup(router *Router, prefix string) *RouteGroup {
 	return &RouteGroup{
 		Router: router,
@@ -72,11 +83,11 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 
 			r.Router.AddRoute(ApiRoute{
 				Name:         h.Name,
-				Path:         r.Prefix + h.Path,
-				Method:       h.Method,
-				ErrorTypes:   h.Errors,
-				ResponseType: h.ResponseType,
-				BodyType:     h.BodyType,
+			Path:         joinPaths(r.Prefix, h.Path),
+			Method:       h.Method,
+			ErrorTypes:   h.Errors,
+			ResponseType: h.ResponseType,
+			BodyType:     h.BodyType,
 			})
 		case pyrin.FormApiHandler:
 			if h.Name == "" {
@@ -85,11 +96,11 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 
 			r.Router.AddRoute(FormApiRoute{
 				Name:         h.Name,
-				Path:         r.Prefix + h.Path,
-				Method:       h.Method,
-				ErrorTypes:   h.Errors,
-				ResponseType: h.ResponseType,
-				Spec:         h.Spec,
+			Path:         joinPaths(r.Prefix, h.Path),
+			Method:       h.Method,
+			ErrorTypes:   h.Errors,
+			ResponseType: h.ResponseType,
+			Spec:         h.Spec,
 			})
 		case pyrin.NormalHandler:
 			if h.Name == "" {
@@ -98,7 +109,7 @@ func (r *RouteGroup) Register(handlers ...pyrin.Handler) {
 
 			r.Router.AddRoute(NormalRoute{
 				Name:   h.Name,
-				Path:   r.Prefix + h.Path,
+				Path:   joinPaths(r.Prefix, h.Path),
 				Method: h.Method,
 			})
 		}
