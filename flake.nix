@@ -31,7 +31,7 @@
             "-X github.com/nanoteck137/pyrin/cmd/pyrin/cli.Commit=${self.dirtyRev or self.rev or "no-commit"}"
           ];
 
-          vendorHash = "sha256-XbPGjX9zqv8v4lUAy5v5EJOC3i+ABUMm251cbytJFiM=";
+          vendorHash = "sha256-Hjs3JLRwBiHk9oIsKppbmThqyWyLrQkBAEpzzVmaj4k=";
         };
 
         tools = devtools.packages.${system};
