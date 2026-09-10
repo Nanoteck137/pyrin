@@ -199,7 +199,11 @@ func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.
 
 	w.Indent()
 
-	w.IndentWritef("return this.request(")
+	if response != "" {
+		w.IndentWritef("return this.request(")
+	} else {
+		w.IndentWritef("this.request(")
+	}
 
 	if len(args) > 0 {
 		w.Writef("`%s`", newPath)
@@ -212,10 +216,10 @@ func (g *TypescriptGenerator) generateApiEndpoint(w *spark.CodeWriter, e *spark.
 	if response != "" {
 		w.Writef(", api.%s", response)
 	} else {
-		w.Writef(", z.undefined()")
+		w.Writef(", z.undefined().optional()")
 	}
 
-	w.Writef(", z.any()")
+	w.Writef(", z.any().optional()")
 
 	if e.Body != "" {
 		w.Writef(", body")
@@ -257,7 +261,11 @@ func (g *TypescriptGenerator) generateFormEndpoint(w *spark.CodeWriter, e *spark
 
 	w.Indent()
 
-	w.IndentWritef("return this.requestForm(")
+	if response != "" {
+		w.IndentWritef("return this.requestForm(")
+	} else {
+		w.IndentWritef("this.requestForm(")
+	}
 
 	if len(args) > 0 {
 		w.Writef("`%s`", newPath)
@@ -405,7 +413,6 @@ func (g *TypescriptGenerator) generateClientCode(out io.Writer, serverDef *spark
 
 	w.Unindent()
 	w.IndentWritef("}\n")
-	
 
 	return nil
 }

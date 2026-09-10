@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export function createApiResponse<
-  Data extends z.ZodTypeAny,
-  ErrorExtra extends z.ZodTypeAny
+  Data extends z.ZodType,
+  ErrorExtra extends z.ZodType,
 >(data: Data, errorExtra: ErrorExtra) {
   return z.discriminatedUnion("success", [
     z.object({ success: z.literal(true), data }),
@@ -47,15 +47,15 @@ export class BaseApiClient {
   }
 
   async request<
-    DataSchema extends z.ZodTypeAny,
-    ErrorExtraSchema extends z.ZodTypeAny
+    DataSchema extends z.ZodType,
+    ErrorExtraSchema extends z.ZodType,
   >(
     endpoint: string,
     method: string,
     dataSchema: DataSchema,
     errorExtraSchema: ErrorExtraSchema,
     body?: unknown,
-    extra?: ExtraOptions
+    extra?: ExtraOptions,
   ) {
     const url = createUrl(this.baseUrl, endpoint);
     const headers = this.getInitialHeaders();
@@ -93,15 +93,15 @@ export class BaseApiClient {
   }
 
   async requestForm<
-    DataSchema extends z.ZodTypeAny,
-    ErrorExtraSchema extends z.ZodTypeAny
+    DataSchema extends z.ZodType,
+    ErrorExtraSchema extends z.ZodType,
   >(
     endpoint: string,
     method: string,
     dataSchema: DataSchema,
     errorExtraSchema: ErrorExtraSchema,
     body: FormData,
-    extra?: ExtraOptions
+    extra?: ExtraOptions,
   ) {
     const url = createUrl(this.baseUrl, endpoint);
     const headers = this.getInitialHeaders();

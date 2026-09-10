@@ -8,7 +8,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kr/pretty"
@@ -99,7 +98,7 @@ func registerRoutes(router pyrin.Router) {
 
 	v1 := router.Group("/api/v1")
 	v1.Register(pyrin.ApiHandler{
-		Name:   "Test123",
+		Name:   "TestApi123",
 		Method: http.MethodPost,
 		Path:   "/test/123",
 		HandlerFunc: func(c pyrin.Context) (any, error) {
@@ -265,8 +264,8 @@ func main() {
 		},
 		RegisterHandlers: registerRoutes,
 		Middlewares: []pyrin.MiddlewareFunc{
-			loggerMiddleware("Test"),
-			corsMiddleware,
+			// loggerMiddleware("Test"),
+			// corsMiddleware,
 			middleware.Recoverer,
 		},
 	})
